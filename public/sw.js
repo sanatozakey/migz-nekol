@@ -1,7 +1,6 @@
-﻿const CACHE_NAME = 'lablab-cache-v1';
+const CACHE_NAME = 'lablab-cache-v2';
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
   '/manifest.webmanifest',
   '/icon.svg',
   '/icon-192.png',
@@ -40,6 +39,24 @@ self.addEventListener('fetch', (event) => {
 
   // Skip cross-origin requests (Supabase, Google Maps, APIs) from aggressive caching
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // HTML page navigation: Network-First so new deployments appear immediately
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(request))
+    );
     return;
   }
 
