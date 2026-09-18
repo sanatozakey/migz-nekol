@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cloud, HardDrive, RefreshCw, Volume2, VolumeX } from 'lucide-react';
+import { Cloud, HardDrive, RefreshCw, Volume2, VolumeX, Download, Smartphone } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { THEME_ASSETS } from '../data/themeAssets';
@@ -7,7 +7,7 @@ import { THEME_ASSETS } from '../data/themeAssets';
 import { useProfile } from '../context/ProfileContext';
 import { playPop, isAudioMuted, toggleAudioMuted, subscribeAudioMute } from '../lib/soundEffects';
 
-export default function Header({ onResetGatekeeper, onOpenCoupons }) {
+export default function Header({ onResetGatekeeper, onOpenCoupons, onOpenInstall, isStandalone }) {
   const { theme, toggleTheme, isKuromi } = useTheme();
   const { activeProfile, toggleProfile, isMigz, myEmoji, partnerName } = useProfile();
   const [muted, setMuted] = useState(() => isAudioMuted());
@@ -122,6 +122,22 @@ export default function Header({ onResetGatekeeper, onOpenCoupons }) {
               title="Open Love Coupons & Vouchers 🎟️"
             >
               <span className="text-sm leading-none">🎟️</span>
+            </button>
+          )}
+
+          {/* PWA Install Button (hidden when already installed in standalone mode) */}
+          {!isStandalone && onOpenInstall && (
+            <button
+              onClick={() => { playPop(); onOpenInstall(); }}
+              className={`p-2 rounded-xl text-xs font-bold border transition-all hover:scale-105 active:scale-95 flex items-center gap-1 ${
+                isKuromi
+                  ? 'border-pink-500/50 bg-pink-950/60 text-pink-300 hover:bg-pink-900/60 shadow-sm shadow-pink-950/50'
+                  : 'border-pink-300 bg-rose-50 text-pink-600 hover:bg-rose-100 shadow-sm'
+              }`}
+              title="Install App to Home Screen 📲"
+            >
+              <Download className="w-4 h-4 text-pink-500 shrink-0" />
+              <span className="hidden md:inline font-bold text-xs">Install</span>
             </button>
           )}
 

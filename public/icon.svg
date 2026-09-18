@@ -1,0 +1,31 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#140f24" />
+      <stop offset="50%" stop-color="#2d133b" />
+      <stop offset="100%" stop-color="#0f0c1b" />
+    </linearGradient>
+    <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff2e74" />
+      <stop offset="50%" stop-color="#f43f5e" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <rect width="512" height="512" rx="115" fill="url(#bg)" />
+  <rect width="500" height="500" x="6" y="6" rx="110" fill="none" stroke="#f43f5e" stroke-opacity="0.3" stroke-width="4" />
+
+  <g filter="url(#glow)">
+    <path d="M256 390 C256 390, 130 300, 130 195 C130 135, 175 100, 225 100 C245 100, 256 112, 256 112 C256 112, 267 100, 287 100 C337 100, 382 135, 382 195 C382 300, 256 390, 256 390 Z" fill="url(#heartGrad)" />
+  </g>
+
+  <text x="180" y="240" font-size="80" text-anchor="middle" dominant-baseline="middle">🐧</text>
+  <text x="332" y="240" font-size="80" text-anchor="middle" dominant-baseline="middle">🖤</text>
+  <text x="256" y="160" font-size="34" text-anchor="middle" dominant-baseline="middle">✨</text>
+
+  <text x="256" y="445" font-family="'Fredoka', 'Quicksand', sans-serif" font-weight="900" font-size="40" fill="#ffffff" text-anchor="middle" letter-spacing="1">MIGZ × NEKOL</text>
+</svg>
