@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Trash2, CheckCircle, Heart, Film, Sparkles, Link as LinkIcon, Layers, Check, ListPlus, Loader2 } from 'lucide-react';
-import { saveMovie, saveMoviesBatch, deleteMovie, toggleMovieReaction } from '../../utils/storage';
+import { saveMovie, saveMoviesBatch, deleteMovie, toggleMovieReaction, getMovieGenres, subscribeStorage } from '../../utils/storage';
 import { MOVIE_GENRES } from '../../data/defaultMovies';
 import { analyzeMovieInput } from '../../utils/smartParsers';
 import { findSequelsAndPrequels } from '../../utils/movieFranchises';
@@ -8,6 +8,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useProfile } from '../../context/ProfileContext';
 import { THEME_ASSETS } from '../../data/themeAssets';
 import { playPop, playSuccessFanfare } from '../../lib/soundEffects';
+import TmdbMovieSearch from './TmdbMovieSearch';
 
 export default function Watchlist({ movies }) {
   const { isKuromi } = useTheme();
@@ -16,6 +17,16 @@ export default function Watchlist({ movies }) {
   const [profileFilter, setProfileFilter] = useState('all'); // 'all', 'Migz', 'Nekol'
   const [showAddModal, setShowAddModal] = useState(false);
   const [addedBySelect, setAddedBySelect] = useState(activeProfile);
+
+  // Dynamic genres from storage & catalog
+  const [availableGenres, setAvailableGenres] = useState(() => getMovieGenres());
+
+  useEffect(() => {
+    const unsub = subscribeStorage(() => {
+      setAvailableGenres(getMovieGenres());
+    });
+    return () => unsub();
+  }, []);
 
   // Smart Movie Analyzer state
   const [smartMovieInput, setSmartMovieInput] = useState('');
@@ -32,6 +43,9 @@ export default function Watchlist({ movies }) {
   const [newDuration, setNewDuration] = useState('');
   const [newStreaming, setNewStreaming] = useState('Netflix');
   const [newNotes, setNewNotes] = useState('');
+  const [newPosterUrl, setNewPosterUrl] = useState('');
+  const [newTmdbId, setNewTmdbId] = useState(null);
+  const [newIsFilipino, setNewIsFilipino] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
   const filterList = (list) => {
@@ -178,6 +192,51 @@ export default function Watchlist({ movies }) {
     }
   };
 
+  // TMDB Selection Handlers
+  const handleSelectTmdbMovie = (tmdbMovie) => {
+    setNewTitle(tmdbMovie.title);
+    setNewGenre(tmdbMovie.genre);
+    setNewDuration(tmdbMovie.duration || '2h');
+    setNewStreaming(tmdbMovie.streaming || 'Netflix');
+    setNewNotes(tmdbMovie.notes || '');
+    setNewPosterUrl(tmdbMovie.poster_url || '');
+    setNewTmdbId(tmdbMovie.tmdb_id || null);
+    setNewIsFilipino(Boolean(tmdbMovie.is_filipino));
+    setAvailableGenres(getMovieGenres());
+    showToast(`Loaded "${tmdbMovie.title}" from TMDB! 🍿`);
+  };
+
+  const handleDirectAddTmdbMovie = async (tmdbMovie) => {
+    playPop();
+    const movie = {
+      id: `mov-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      title: tmdbMovie.title,
+      genre: tmdbMovie.genre,
+      duration: tmdbMovie.duration || '2h',
+      rating: tmdbMovie.rating || 5,
+      watched: false,
+      streaming: tmdbMovie.streaming || 'Netflix',
+      added_by: addedBySelect || activeProfile,
+      notes: tmdbMovie.notes || 'Added via TMDB 💕',
+      poster_url: tmdbMovie.poster_url || null,
+      tmdb_id: tmdbMovie.tmdb_id || null,
+      is_filipino: Boolean(tmdbMovie.is_filipino)
+    };
+
+    await saveMovie(movie);
+    setAvailableGenres(getMovieGenres());
+    try { playSuccessFanfare(); } catch {}
+    showToast(`Added "${movie.title}" to watchlist! 🍿`);
+    setSmartMovieInput('');
+    setNewTitle('');
+    setNewDuration('');
+    setNewNotes('');
+    setNewPosterUrl('');
+    setNewTmdbId(null);
+    setNewIsFilipino(false);
+    setShowAddModal(false);
+  };
+
   const handleAddMovie = async (e) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
@@ -200,15 +259,22 @@ export default function Watchlist({ movies }) {
       watched: false,
       streaming: newStreaming.trim() || 'Netflix',
       added_by: addedBySelect || activeProfile,
-      notes: newNotes.trim() || 'Added to Migz X Nekol movie date list 💕'
+      notes: newNotes.trim() || 'Added to Migz X Nekol movie date list 💕',
+      poster_url: newPosterUrl || null,
+      tmdb_id: newTmdbId || null,
+      is_filipino: Boolean(newIsFilipino)
     };
 
     await saveMovie(movie);
+    setAvailableGenres(getMovieGenres());
     showToast(`Added "${movie.title}" to watchlist! 🍿`);
     setSmartMovieInput('');
     setNewTitle('');
     setNewDuration('');
     setNewNotes('');
+    setNewPosterUrl('');
+    setNewTmdbId(null);
+    setNewIsFilipino(false);
     setShowAddModal(false);
   };
 
@@ -348,64 +414,87 @@ export default function Watchlist({ movies }) {
                 : 'bg-white border-slate-200 hover:border-sky-300 shadow-sm text-slate-900'
             }`}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Attribution Badge */}
-                  {movie.added_by?.includes('Migz') && !movie.added_by?.includes('Nekol') ? (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                      🐧 Added by Migz
-                    </span>
-                  ) : movie.added_by?.includes('Nekol') && !movie.added_by?.includes('Migz') ? (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-500/15 text-pink-400 border border-pink-500/30">
-                      🖤 Added by Nekol
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                      💕 Added by Both
-                    </span>
-                  )}
-
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-pink-500/20 text-pink-500 border border-pink-500/30">
-                    {movie.genre}
-                  </span>
-                  {movie.streaming && (
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-500/20 text-slate-400">
-                      📺 {movie.streaming}
-                    </span>
-                  )}
-                  {movie.duration && (
-                    <span className="text-[11px] font-bold opacity-60">⏳ {movie.duration}</span>
-                  )}
+            <div className="flex items-start gap-3.5">
+              {/* Poster Thumbnail if available */}
+              {movie.poster_url && (
+                <div className="w-14 sm:w-16 h-20 sm:h-24 rounded-2xl overflow-hidden shrink-0 border border-slate-500/20 shadow-md bg-slate-800 flex items-center justify-center">
+                  <img
+                    src={movie.poster_url}
+                    alt={movie.title}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
                 </div>
+              )}
 
-                <h4 className="font-black text-base sm:text-lg font-heading mt-1">
-                  {movie.title}
-                </h4>
-              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Attribution Badge */}
+                      {movie.added_by?.includes('Migz') && !movie.added_by?.includes('Nekol') ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                          🐧 Added by Migz
+                        </span>
+                      ) : movie.added_by?.includes('Nekol') && !movie.added_by?.includes('Migz') ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-500/15 text-pink-400 border border-pink-500/30">
+                          🖤 Added by Nekol
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                          💕 Added by Both
+                        </span>
+                      )}
 
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleToggleWatched(movie)}
-                  title={movie.watched ? "Mark as unwatched" : "Mark as watched"}
-                  className={`p-2 rounded-xl transition-colors ${
-                    movie.watched
-                      ? 'text-emerald-400 hover:bg-emerald-500/10'
-                      : 'text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10'
-                  }`}
-                >
-                  <CheckCircle className={`w-5 h-5 ${movie.watched ? 'fill-emerald-500/20' : ''}`} />
-                </button>
+                      {/* Filipino Cinema Badge */}
+                      {movie.is_filipino && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-xs">
+                          🇵🇭 Pinoy
+                        </span>
+                      )}
 
-                <button
-                  type="button"
-                  onClick={() => handleDelete(movie.id)}
-                  className="p-2 rounded-xl text-rose-400 hover:text-white hover:bg-rose-600 transition-colors"
-                  title="Delete movie"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-pink-500/20 text-pink-500 border border-pink-500/30">
+                        {movie.genre}
+                      </span>
+                      {movie.streaming && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-500/20 text-slate-400">
+                          📺 {movie.streaming}
+                        </span>
+                      )}
+                      {movie.duration && (
+                        <span className="text-[11px] font-bold opacity-60">⏳ {movie.duration}</span>
+                      )}
+                    </div>
+
+                    <h4 className="font-black text-base sm:text-lg font-heading mt-1 leading-snug">
+                      {movie.title}
+                    </h4>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleWatched(movie)}
+                      title={movie.watched ? "Mark as unwatched" : "Mark as watched"}
+                      className={`p-2 rounded-xl transition-colors ${
+                        movie.watched
+                          ? 'text-emerald-400 hover:bg-emerald-500/10'
+                          : 'text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10'
+                      }`}
+                    >
+                      <CheckCircle className={`w-5 h-5 ${movie.watched ? 'fill-emerald-500/20' : ''}`} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(movie.id)}
+                      className="p-2 rounded-xl text-rose-400 hover:text-white hover:bg-rose-600 transition-colors"
+                      title="Delete movie"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -524,9 +613,22 @@ export default function Watchlist({ movies }) {
               />
             </div>
             
-            <p className="text-xs font-semibold opacity-75 mb-4">
-              Enter a link, movie title, or franchise to auto-detect genres, prequels & sequels!
+            <p className="text-xs font-semibold opacity-75 mb-3">
+              Search any movie for instant auto-categorization & poster, or paste a link/franchise below!
             </p>
+
+            {/* Live TMDB Movie Search-as-you-type */}
+            <div className="mb-4">
+              <label className="block text-xs font-black uppercase tracking-wider mb-1.5 flex items-center gap-1.5 text-pink-500">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Live TMDB Search (Instant Auto-Fill & Auto-Genre)</span>
+              </label>
+              <TmdbMovieSearch
+                existingMovies={movies}
+                onSelectMovie={handleSelectTmdbMovie}
+                onAddDirect={handleDirectAddTmdbMovie}
+              />
+            </div>
 
             {/* Smart Analyzer Box */}
             <div className={`p-4 rounded-2xl border mb-4 ${
@@ -617,7 +719,7 @@ export default function Watchlist({ movies }) {
                         isKuromi ? 'bg-slate-900 border-purple-800 text-white' : 'bg-white border-slate-300 text-slate-900'
                       }`}
                     >
-                      {MOVIE_GENRES.filter(g => g !== 'All Genres').map(g => (
+                      {availableGenres.filter(g => g !== 'All Genres').map(g => (
                         <option key={g} value={g}>{g}</option>
                       ))}
                     </select>
@@ -817,6 +919,21 @@ export default function Watchlist({ movies }) {
                       : 'bg-white border-slate-300 text-slate-900 focus:border-sky-500'
                   }`}
                 />
+                {newPosterUrl && (
+                  <div className="mt-2 flex items-center gap-2.5 p-2 rounded-xl border border-pink-500/30 bg-pink-500/10 animate-fade-in">
+                    <img src={newPosterUrl} alt="Poster" className="w-8 h-12 rounded-lg object-cover shadow-sm shrink-0 border border-pink-500/40" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[11px] font-bold text-pink-400 block">🎬 TMDB Poster Attached</span>
+                      <button
+                        type="button"
+                        onClick={() => setNewPosterUrl('')}
+                        className="text-[10px] underline text-slate-400 hover:text-rose-400"
+                      >
+                        Remove poster
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -831,7 +948,7 @@ export default function Watchlist({ movies }) {
                         : 'bg-white border-slate-300 text-slate-900'
                     }`}
                   >
-                    {MOVIE_GENRES.filter(g => g !== 'All Genres').map(g => (
+                    {availableGenres.filter(g => g !== 'All Genres').map(g => (
                       <option key={g} value={g}>{g}</option>
                     ))}
                   </select>

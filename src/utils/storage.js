@@ -10,7 +10,8 @@ const KEYS = {
   GATEKEEPER: 'lablab_verified_nekol_v1',
   BUDGET: 'lablab_budget_targets_v1',
   COUPLE_STATUS: 'lablab_couple_status_v1',
-  COUPONS: 'lablab_coupons_v1'
+  COUPONS: 'lablab_coupons_v1',
+  GENRES: 'lablab_movie_genres_v1'
 };
 
 // Listeners for reactive updates
@@ -191,6 +192,155 @@ export async function deleteMovie(id) {
     }
   }
   return updated;
+}
+
+// ----------------- Dynamic Movie Genres -----------------
+export const BASE_MOVIE_GENRES = [
+  'All Genres',
+  'Filipino Cinema',
+  'Pinoy Rom-Com',
+  'Romance',
+  'Animation',
+  'Horror',
+  'K-Drama',
+  'Comedy'
+];
+
+export function getMovieGenres() {
+  let custom = [];
+  try {
+    const raw = localStorage.getItem(KEYS.GENRES);
+    if (raw) custom = JSON.parse(raw);
+  } catch (e) {
+    console.error(e);
+  }
+
+  // Also include any genres present in current catalog movies
+  let movieGenres = [];
+  try {
+    const rawMovies = localStorage.getItem(KEYS.MOVIES);
+    if (rawMovies) {
+      const parsed = JSON.parse(rawMovies);
+      movieGenres = parsed.map(m => m.genre).filter(Boolean);
+    }
+  } catch {}
+
+  const merged = Array.from(new Set([...BASE_MOVIE_GENRES, ...custom, ...movieGenres]));
+  return merged;
+}
+
+export function addCustomGenre(genreName) {
+  if (!genreName || typeof genreName !== 'string') return;
+  const clean = genreName.trim();
+  if (!clean || clean.toLowerCase() === 'all genres') return;
+
+  const current = getMovieGenres();
+  const exists = current.some(g => g.toLowerCase() === clean.toLowerCase());
+  if (!exists) {
+    let custom = [];
+    try {
+      const raw = localStorage.getItem(KEYS.GENRES);
+      if (raw) custom = JSON.parse(raw);
+    } catch {}
+
+    const formatted = clean.charAt(0).toUpperCase() + clean.slice(1);
+    const updated = Array.from(new Set([...custom, formatted]));
+    localStorage.setItem(KEYS.GENRES, JSON.stringify(updated));
+    notify();
+    return formatted;
+  }
+  return current.find(g => g.toLowerCase() === clean.toLowerCase()) || clean;
+}
+
+/**
+ * Auto-categorize a movie based on TMDB details and app catalog genres.
+ * Dynamically creates and registers new genres if not already in catalog!
+ */
+export function autoCategorizeMovie(tmdbDetails) {
+  if (!tmdbDetails) return { primaryGenre: 'Romance', allGenres: ['Romance'] };
+
+  const { is_filipino, is_korean, genre_names = [], genres = [] } = tmdbDetails;
+  const rawNames = (genre_names.length > 0 ? genre_names : genres.map(g => g.name || g)).filter(Boolean);
+
+  // 1. Filipino Cinema handling
+  if (is_filipino) {
+    const hasRomCom = rawNames.some(g => 
+      ['Romance', 'Comedy', 'Drama'].includes(g)
+    );
+    if (hasRomCom) {
+      return { 
+        primaryGenre: 'Pinoy Rom-Com', 
+        allGenres: Array.from(new Set(['Pinoy Rom-Com', 'Filipino Cinema', ...rawNames])) 
+      };
+    }
+    return { 
+      primaryGenre: 'Filipino Cinema', 
+      allGenres: Array.from(new Set(['Filipino Cinema', ...rawNames])) 
+    };
+  }
+
+  // 2. Korean handling
+  if (is_korean) {
+    return { 
+      primaryGenre: 'K-Drama', 
+      allGenres: Array.from(new Set(['K-Drama', ...rawNames])) 
+    };
+  }
+
+  // 3. Match against existing genres or dynamically create new ones
+  const currentGenres = getMovieGenres();
+  const existingMap = new Map(currentGenres.map(g => [g.toLowerCase(), g]));
+
+  const aliasMap = {
+    'science fiction': 'Sci-Fi',
+    'sci-fi': 'Sci-Fi',
+    'action': 'Action',
+    'thriller': 'Thriller',
+    'adventure': 'Adventure',
+    'fantasy': 'Fantasy',
+    'mystery': 'Mystery',
+    'crime': 'Crime',
+    'documentary': 'Documentary',
+    'family': 'Family',
+    'music': 'Music',
+    'history': 'History',
+    'war': 'War',
+    'western': 'Western',
+    'romance': 'Romance',
+    'comedy': 'Comedy',
+    'animation': 'Animation',
+    'horror': 'Horror'
+  };
+
+  let primaryGenre = null;
+  const processedGenres = [];
+
+  for (const rawName of rawNames) {
+    const lower = rawName.toLowerCase();
+    const mappedTarget = aliasMap[lower] || rawName;
+
+    const existing = existingMap.get(mappedTarget.toLowerCase()) || existingMap.get(lower);
+    if (existing) {
+      if (!primaryGenre) primaryGenre = existing;
+      processedGenres.push(existing);
+    } else {
+      // Dynamically create and persist the new genre!
+      const created = addCustomGenre(mappedTarget);
+      if (created) {
+        if (!primaryGenre) primaryGenre = created;
+        processedGenres.push(created);
+      }
+    }
+  }
+
+  if (!primaryGenre) {
+    primaryGenre = rawNames[0] ? (addCustomGenre(rawNames[0]) || 'Romance') : 'Romance';
+  }
+
+  return {
+    primaryGenre: primaryGenre || 'Romance',
+    allGenres: Array.from(new Set([primaryGenre, ...processedGenres]))
+  };
 }
 
 // ----------------- Food Spots -----------------

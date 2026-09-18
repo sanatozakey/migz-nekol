@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { Sparkles, Dices, Film, Heart, CheckCircle2, Plus, ListFilter, Play } from 'lucide-react';
 import { MOVIE_GENRES } from '../../data/defaultMovies';
-import { getMovies, saveMovie, subscribeStorage } from '../../utils/storage';
+import { getMovies, saveMovie, subscribeStorage, getMovieGenres } from '../../utils/storage';
 import { playTick, playSuccessFanfare, playPop } from '../../lib/soundEffects';
 import { useTheme } from '../../context/ThemeContext';
 import { THEME_ASSETS } from '../../data/themeAssets';
@@ -12,6 +12,7 @@ export default function MovieRoulette() {
   const { isKuromi } = useTheme();
   const mascotImg = isKuromi ? THEME_ASSETS.kuromi.movies : THEME_ASSETS.penguin.movies;
   const [movies, setMovies] = useState([]);
+  const [availableGenres, setAvailableGenres] = useState(() => getMovieGenres());
   const [selectedGenre, setSelectedGenre] = useState('All Genres');
   const [profilePool, setProfilePool] = useState('all'); // 'all', 'Migz', 'Nekol'
   const [viewMode, setViewMode] = useState('roulette'); // 'roulette' or 'watchlist'
@@ -22,10 +23,11 @@ export default function MovieRoulette() {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const spinTimerRef = useRef(null);
 
-  // Load movies
+  // Load movies & dynamic genres
   const loadData = async () => {
     const list = await getMovies();
     setMovies(list);
+    setAvailableGenres(getMovieGenres());
   };
 
   useEffect(() => {
@@ -211,7 +213,7 @@ export default function MovieRoulette() {
                 <span className="text-xs font-black mr-1 flex items-center gap-1 opacity-80">
                   <ListFilter className="w-3.5 h-3.5" /> Genre:
                 </span>
-                {MOVIE_GENRES.map(genre => (
+                {availableGenres.map(genre => (
                   <button
                     key={genre}
                     disabled={isSpinning}
@@ -248,7 +250,18 @@ export default function MovieRoulette() {
                   : 'border-sky-300 bg-sky-50/50'
             }`}>
               {highlightedMovie ? (
-                <div className={`space-y-3 transition-all ${isSpinning ? 'opacity-80 scale-95' : 'opacity-100 scale-100'}`}>
+                <div className={`space-y-3 transition-all flex flex-col items-center ${isSpinning ? 'opacity-80 scale-95' : 'opacity-100 scale-100'}`}>
+                  {/* Movie Poster if available */}
+                  {highlightedMovie.poster_url && (
+                    <div className="w-20 sm:w-24 h-28 sm:h-36 mx-auto rounded-2xl overflow-hidden shadow-xl border-2 border-pink-400/50 shrink-0 bg-slate-800 animate-fade-in">
+                      <img
+                        src={highlightedMovie.poster_url}
+                        alt={highlightedMovie.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-center gap-2 flex-wrap">
                     {/* Attribution Badge */}
                     {highlightedMovie.added_by?.includes('Migz') && !highlightedMovie.added_by?.includes('Nekol') ? (
@@ -260,6 +273,13 @@ export default function MovieRoulette() {
                         🖤 Nekol's Pick
                       </span>
                     ) : null}
+
+                    {/* Filipino Cinema Badge */}
+                    {highlightedMovie.is_filipino && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-xs">
+                        🇵🇭 Pinoy
+                      </span>
+                    )}
 
                     <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-pink-500/20 text-pink-500 border border-pink-500/30">
                       {highlightedMovie.genre}
