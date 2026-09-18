@@ -4,14 +4,12 @@ import { useTheme } from '../context/ThemeContext';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { THEME_ASSETS } from '../data/themeAssets';
 import { useProfile } from '../context/ProfileContext';
-import { playPop, isAudioMuted, toggleAudioMuted, subscribeAudioMute } from '../lib/soundEffects';
-import QuickSettingsModal from './common/QuickSettingsModal';
+import { playPop, isAudioMuted, subscribeAudioMute } from '../lib/soundEffects';
 
-export default function Header({ onResetGatekeeper, onOpenCoupons, onOpenInstall, isStandalone }) {
+export default function Header({ onOpenSettings }) {
   const { toggleTheme, isKuromi } = useTheme();
   const { activeProfile, toggleProfile, isMigz, myEmoji, partnerName } = useProfile();
   const [muted, setMuted] = useState(() => isAudioMuted());
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeAudioMute((val) => setMuted(val));
@@ -91,7 +89,7 @@ export default function Header({ onResetGatekeeper, onOpenCoupons, onOpenInstall
 
           {/* 3. Settings & Shortcuts Drawer Button */}
           <button
-            onClick={() => { playPop(); setShowSettingsModal(true); }}
+            onClick={() => { playPop(); onOpenSettings(); }}
             className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl border transition-all hover:scale-105 active:scale-95 shadow-sm shrink-0 ${
               isKuromi
                 ? 'border-purple-800/60 bg-purple-950/50 text-purple-200 hover:bg-purple-900/60'
@@ -107,29 +105,6 @@ export default function Header({ onResetGatekeeper, onOpenCoupons, onOpenInstall
           </button>
         </div>
       </div>
-
-      {/* Quick Settings & Shortcuts Modal */}
-      <QuickSettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        isKuromi={isKuromi}
-        activeProfile={activeProfile}
-        onToggleProfile={toggleProfile}
-        isMigz={isMigz}
-        partnerName={partnerName}
-        muted={muted}
-        onToggleMute={() => {
-          const nextMuted = toggleAudioMuted();
-          setMuted(nextMuted);
-          if (!nextMuted) playPop();
-        }}
-        onOpenInstall={onOpenInstall}
-        isStandalone={isStandalone}
-        onOpenCoupons={onOpenCoupons}
-        onResetGatekeeper={onResetGatekeeper}
-        onToggleTheme={toggleTheme}
-        isSupabaseConfigured={isSupabaseConfigured}
-      />
     </header>
   );
 }

@@ -9,6 +9,7 @@ import CalendarView from './components/calendar/CalendarView';
 import CoupleMoodBar from './components/couple/CoupleMoodBar';
 import LoveCouponsModal from './components/couple/LoveCouponsModal';
 import InstallAppModal from './components/common/InstallAppModal';
+import QuickSettingsModal from './components/common/QuickSettingsModal';
 import LovePingOverlay from './components/common/LovePingOverlay';
 import { useTheme } from './context/ThemeContext';
 import { isUserVerified, setUserVerified } from './utils/storage';
@@ -19,6 +20,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('movies');
   const [showCouponsModal, setShowCouponsModal] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -98,6 +100,16 @@ export default function App() {
         isIos={isIos}
       />
 
+      {/* Quick Settings & Couple Controls Modal */}
+      <QuickSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onOpenInstall={() => setShowInstallModal(true)}
+        isStandalone={isStandalone}
+        onOpenCoupons={() => setShowCouponsModal(true)}
+        onResetGatekeeper={handleResetGatekeeper}
+      />
+
       {/* Identity Gatekeeper Prompt */}
       {!verified && (
         <GatekeeperModal onVerified={() => setVerified(true)} />
@@ -105,10 +117,7 @@ export default function App() {
 
       {/* App Header */}
       <Header 
-        onResetGatekeeper={handleResetGatekeeper} 
-        onOpenCoupons={() => setShowCouponsModal(true)} 
-        onOpenInstall={() => setShowInstallModal(true)}
-        isStandalone={isStandalone}
+        onOpenSettings={() => setShowSettingsModal(true)} 
       />
 
       {/* Main Content Area */}

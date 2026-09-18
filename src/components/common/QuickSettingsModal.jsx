@@ -1,52 +1,52 @@
-﻿import React from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Volume2, 
   VolumeX, 
-  Download, 
   Smartphone, 
   Ticket, 
   Lock, 
-  Cloud, 
-  HardDrive, 
-  Sparkles, 
   ArrowLeftRight,
   Palette
 } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { useProfile } from '../../context/ProfileContext';
+import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import { THEME_ASSETS } from '../../data/themeAssets';
-import { playPop } from '../../lib/soundEffects';
+import { playPop, isAudioMuted, toggleAudioMuted, subscribeAudioMute } from '../../lib/soundEffects';
 
 export default function QuickSettingsModal({
   isOpen,
   onClose,
-  isKuromi,
-  activeProfile,
-  onToggleProfile,
-  isMigz,
-  partnerName,
-  muted,
-  onToggleMute,
   onOpenInstall,
   isStandalone,
   onOpenCoupons,
-  onResetGatekeeper,
-  onToggleTheme,
-  isSupabaseConfigured
+  onResetGatekeeper
 }) {
+  const { toggleTheme, isKuromi } = useTheme();
+  const { activeProfile, toggleProfile, isMigz, partnerName } = useProfile();
+  const [muted, setMuted] = useState(() => isAudioMuted());
+
+  useEffect(() => {
+    const unsub = subscribeAudioMute((val) => setMuted(val));
+    return () => unsub();
+  }, []);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+  const content = (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-3.5 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
       {/* Click outside backdrop */}
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className={`relative w-full max-w-md rounded-t-3xl sm:rounded-3xl border p-5 sm:p-6 shadow-2xl transition-all max-h-[90dvh] overflow-y-auto ${
+      <div className={`relative w-full max-w-md max-h-[85dvh] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden ${
         isKuromi 
-          ? 'bg-[#161224] border-[#362b50] text-slate-100 shadow-purple-950/50' 
-          : 'bg-white border-sky-100 text-slate-800 shadow-sky-100/50'
+          ? 'bg-[#161224] border-[#362b50] text-slate-100 shadow-purple-950/60' 
+          : 'bg-white border-sky-100 text-slate-800 shadow-sky-100/60'
       }`}>
-        {/* Modal Header */}
-        <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-200/20">
+        {/* Fixed Header */}
+        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 border-b border-slate-200/20">
           <div className="flex items-center gap-2">
             <span className="text-xl">⚙️</span>
             <div>
@@ -60,7 +60,7 @@ export default function QuickSettingsModal({
           </div>
           <button
             onClick={() => { playPop(); onClose(); }}
-            className={`p-1.5 rounded-full transition-colors ${
+            className={`p-2 rounded-full transition-colors ${
               isKuromi ? 'hover:bg-purple-900/60 text-slate-300' : 'hover:bg-slate-100 text-slate-500'
             }`}
           >
@@ -68,7 +68,8 @@ export default function QuickSettingsModal({
           </button>
         </div>
 
-        <div className="space-y-3">
+        {/* Scrollable Content Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
           {/* Active Profile Identity Switcher Card */}
           <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
             isKuromi 
@@ -88,7 +89,7 @@ export default function QuickSettingsModal({
             <button
               onClick={() => {
                 playPop();
-                onToggleProfile();
+                toggleProfile();
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-black border flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 shadow-sm shrink-0 ${
                 isMigz
@@ -125,7 +126,7 @@ export default function QuickSettingsModal({
             <button
               onClick={() => {
                 playPop();
-                onToggleTheme();
+                toggleTheme();
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all hover:scale-105 active:scale-95 ${
                 isKuromi
@@ -158,7 +159,11 @@ export default function QuickSettingsModal({
             </div>
 
             <button
-              onClick={onToggleMute}
+              onClick={() => {
+                const nextMuted = toggleAudioMuted();
+                setMuted(nextMuted);
+                if (!nextMuted) playPop();
+              }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all hover:scale-105 active:scale-95 ${
                 muted
                   ? 'bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30'
@@ -272,8 +277,8 @@ export default function QuickSettingsModal({
           </div>
         </div>
 
-        {/* Modal Footer / Cloud Status */}
-        <div className="mt-5 pt-3.5 border-t border-slate-200/20 flex items-center justify-between text-xs">
+        {/* Fixed Footer */}
+        <div className="shrink-0 px-4 sm:px-5 py-3 border-t border-slate-200/20 flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${
               isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
@@ -290,4 +295,6 @@ export default function QuickSettingsModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : content;
 }
