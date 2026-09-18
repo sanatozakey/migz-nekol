@@ -25,7 +25,7 @@ export default function ExpenseTracker() {
   const loadData = async () => {
     const list = await getExpenses();
     setExpenses(list);
-    const targets = getBudgetTargets();
+    const targets = await getBudgetTargets();
     setBudgetTargets(targets);
     setEditMonthly(targets.monthly || 10000);
     setEditWeekly(targets.weekly || 2500);
@@ -58,7 +58,7 @@ export default function ExpenseTracker() {
     showToast(`Removed "${itemToDelete?.title || 'Expense'}" from ledger`);
   };
 
-  const handleSaveBudget = (e) => {
+  const handleSaveBudget = async (e) => {
     e.preventDefault();
     playSuccessFanfare();
     const updated = {
@@ -66,10 +66,10 @@ export default function ExpenseTracker() {
       weekly: parseFloat(editWeekly) || 2500,
       daily: parseFloat(editDaily) || 500
     };
-    saveBudgetTargets(updated);
     setBudgetTargets(updated);
     setShowBudgetModal(false);
     showToast('Updated couple budget targets! 🎯');
+    await saveBudgetTargets(updated);
   };
 
   // Safe local date calculations

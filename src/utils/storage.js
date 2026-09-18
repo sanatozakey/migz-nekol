@@ -17,10 +17,36 @@ export function subscribeStorage(callback) {
   listeners.add(callback);
   return () => listeners.delete(callback);
 }
-function notify() {
+export function notify() {
   listeners.forEach(cb => {
     try { cb(); } catch (e) { console.error(e); }
   });
+}
+
+// Real-time synchronization: listen for database changes from either partner's phone
+if (isSupabaseConfigured && supabase) {
+  try {
+    supabase
+      .channel('lablab_realtime_sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        async (payload) => {
+          const { table } = payload;
+          try {
+            if (table === 'lablab_movies') await getMovies();
+            else if (table === 'lablab_food_spots') await getFoodSpots();
+            else if (table === 'lablab_expenses') await getExpenses();
+            else if (table === 'lablab_memories') await getMemories();
+            else if (table === 'lablab_budget') await getBudgetTargets();
+          } catch {}
+          notify();
+        }
+      )
+      .subscribe();
+  } catch (err) {
+    console.warn('Supabase Realtime setup notice:', err);
+  }
 }
 
 // ----------------- Gatekeeper Status -----------------
@@ -270,7 +296,24 @@ export async function getExpenses() {
 }
 
 // ----------------- Budget Targets -----------------
-export function getBudgetTargets() {
+export async function getBudgetTargets() {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('lablab_budget').select('*').eq('id', 'main-budget').maybeSingle();
+      if (!error && data) {
+        const targets = {
+          monthly: Number(data.monthly) || 10000,
+          weekly: Number(data.weekly) || 2500,
+          daily: Number(data.daily) || 500
+        };
+        localStorage.setItem(KEYS.BUDGET, JSON.stringify(targets));
+        return targets;
+      }
+    } catch (e) {
+      console.warn('Supabase budget fetch notice:', e);
+    }
+  }
+
   try {
     const raw = localStorage.getItem(KEYS.BUDGET);
     if (raw) return JSON.parse(raw);
@@ -286,12 +329,26 @@ export function getBudgetTargets() {
   return defaultTargets;
 }
 
-export function saveBudgetTargets(targets) {
+export async function saveBudgetTargets(targets) {
   try {
     localStorage.setItem(KEYS.BUDGET, JSON.stringify(targets));
     notify();
   } catch (e) {
     console.error(e);
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('lablab_budget').upsert({
+        id: 'main-budget',
+        monthly: targets.monthly,
+        weekly: targets.weekly,
+        daily: targets.daily,
+        updated_at: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn('Supabase budget save notice:', e);
+    }
   }
 }
 

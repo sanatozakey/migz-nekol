@@ -42,25 +42,25 @@ export default function Header({ onResetGatekeeper }) {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Cloud Sync Status Badge */}
           <div 
-            title={isSupabaseConfigured ? "Connected to Supabase Real-Time Cloud" : "Local Storage Mode (Add Supabase keys in .env for multi-phone cloud sync)"}
-            className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+            title={isSupabaseConfigured ? "Connected to Supabase Real-Time Cloud" : "Local Storage Mode (Add Supabase keys in Vercel / .env for multi-phone cloud sync)"}
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold border transition-all ${
               isSupabaseConfigured
                 ? isKuromi
-                  ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-700/60 shadow-sm shadow-emerald-950/50'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm'
                 : isKuromi
-                  ? 'bg-slate-900 text-slate-300 border-slate-700'
-                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                  ? 'bg-amber-950/40 text-amber-300 border-amber-800/60'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
             }`}
           >
             {isSupabaseConfigured ? (
               <>
-                <Cloud className="w-3.5 h-3.5 text-emerald-500" />
+                <Cloud className="w-3.5 h-3.5 text-emerald-500 shrink-0 animate-pulse" />
                 <span>Cloud Sync</span>
               </>
             ) : (
               <>
-                <HardDrive className="w-3.5 h-3.5 text-slate-400" />
+                <HardDrive className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 <span>Local Mode</span>
               </>
             )}
