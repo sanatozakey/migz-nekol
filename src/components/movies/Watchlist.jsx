@@ -1,17 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, CheckCircle, Heart, Film, Sparkles, Link as LinkIcon, Layers, Check, ListPlus, Loader2 } from 'lucide-react';
-import { saveMovie, saveMoviesBatch, deleteMovie } from '../../utils/storage';
+import { saveMovie, saveMoviesBatch, deleteMovie, toggleMovieReaction } from '../../utils/storage';
 import { MOVIE_GENRES } from '../../data/defaultMovies';
 import { analyzeMovieInput } from '../../utils/smartParsers';
 import { findSequelsAndPrequels } from '../../utils/movieFranchises';
 import { useTheme } from '../../context/ThemeContext';
+import { useProfile } from '../../context/ProfileContext';
 import { THEME_ASSETS } from '../../data/themeAssets';
 import { playPop, playSuccessFanfare } from '../../lib/soundEffects';
 
 export default function Watchlist({ movies }) {
   const { isKuromi } = useTheme();
+  const { activeProfile, isMigz } = useProfile();
   const [activeTab, setActiveTab] = useState('unwatched'); // 'unwatched' or 'watched'
+  const [profileFilter, setProfileFilter] = useState('all'); // 'all', 'Migz', 'Nekol'
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addedBySelect, setAddedBySelect] = useState(activeProfile);
 
   // Smart Movie Analyzer state
   const [smartMovieInput, setSmartMovieInput] = useState('');
@@ -30,8 +34,13 @@ export default function Watchlist({ movies }) {
   const [newNotes, setNewNotes] = useState('');
   const [toastMessage, setToastMessage] = useState('');
 
-  const unwatched = movies.filter(m => !m.watched);
-  const watched = movies.filter(m => m.watched);
+  const filterList = (list) => {
+    if (profileFilter === 'all') return list;
+    return list.filter(m => (m.added_by || 'Migz & Nekol').toLowerCase().includes(profileFilter.toLowerCase()));
+  };
+
+  const unwatched = filterList(movies.filter(m => !m.watched));
+  const watched = filterList(movies.filter(m => m.watched));
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -102,6 +111,7 @@ export default function Watchlist({ movies }) {
       rating: 5,
       watched: false,
       streaming: item.streaming || 'Netflix',
+      added_by: addedBySelect || activeProfile,
       notes: `${item.type.toUpperCase()} from ${detectedFranchise?.franchiseName} series 💕`
     };
 
@@ -125,6 +135,7 @@ export default function Watchlist({ movies }) {
           rating: 5,
           watched: false,
           streaming: item.streaming || 'Netflix',
+          added_by: addedBySelect || activeProfile,
           notes: `${item.type.toUpperCase()} from ${detectedFranchise.franchiseName} series`
         });
       }
@@ -149,6 +160,7 @@ export default function Watchlist({ movies }) {
         rating: 5,
         watched: false,
         streaming: batchStreaming,
+        added_by: addedBySelect || activeProfile,
         notes: `Imported from ${detectedList.listTitle} 💕`
       }));
 
@@ -187,6 +199,7 @@ export default function Watchlist({ movies }) {
       rating: 5,
       watched: false,
       streaming: newStreaming.trim() || 'Netflix',
+      added_by: addedBySelect || activeProfile,
       notes: newNotes.trim() || 'Added to Migz X Nekol movie date list 💕'
     };
 
@@ -244,11 +257,11 @@ export default function Watchlist({ movies }) {
             alt="Cinema Mascot" 
             className="w-11 h-11 rounded-2xl object-cover border-2 shadow-md border-pink-400/50"
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => { playPop(); setActiveTab('unwatched'); }}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-black transition-all ${
                 activeTab === 'unwatched'
                   ? isKuromi ? 'bg-pink-600 text-white shadow-md' : 'bg-sky-500 text-white shadow-md'
                   : isKuromi ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'
@@ -259,20 +272,20 @@ export default function Watchlist({ movies }) {
             <button
               type="button"
               onClick={() => { playPop(); setActiveTab('watched'); }}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-black transition-all ${
                 activeTab === 'watched'
                   ? isKuromi ? 'bg-purple-600 text-white shadow-md' : 'bg-sky-500 text-white shadow-md'
                   : isKuromi ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              💕 Watched & Rated ({watched.length})
+              💕 Watched ({watched.length})
             </button>
           </div>
         </div>
 
         <button
           type="button"
-          onClick={() => { playPop(); setShowAddModal(true); }}
+          onClick={() => { playPop(); setAddedBySelect(activeProfile); setShowAddModal(true); }}
           className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-white shadow-sm transition-all ${
             isKuromi
               ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/25'
@@ -281,6 +294,46 @@ export default function Watchlist({ movies }) {
         >
           <Plus className="w-4 h-4" />
           <span>+ Add Movie / Link / Series</span>
+        </button>
+      </div>
+
+      {/* Profile Filter Tabs */}
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap text-xs font-bold">
+        <span className="text-[11px] opacity-60 mr-1">Filter by Partner:</span>
+        <button
+          type="button"
+          onClick={() => { playPop(); setProfileFilter('all'); }}
+          className={`px-2.5 py-1 rounded-xl transition-all ${
+            profileFilter === 'all'
+              ? 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm'
+              : 'opacity-60 hover:opacity-100'
+          }`}
+        >
+          All ({movies.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => { playPop(); setProfileFilter('Migz'); }}
+          className={`px-2.5 py-1 rounded-xl transition-all flex items-center gap-1 ${
+            profileFilter === 'Migz'
+              ? 'bg-sky-500 text-white shadow-sm'
+              : 'opacity-60 hover:opacity-100 text-sky-500'
+          }`}
+        >
+          <span>🐧</span>
+          <span>Migz's Picks ({movies.filter(m => (m.added_by || '').includes('Migz')).length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => { playPop(); setProfileFilter('Nekol'); }}
+          className={`px-2.5 py-1 rounded-xl transition-all flex items-center gap-1 ${
+            profileFilter === 'Nekol'
+              ? 'bg-pink-500 text-white shadow-sm'
+              : 'opacity-60 hover:opacity-100 text-pink-500'
+          }`}
+        >
+          <span>🖤</span>
+          <span>Nekol's Picks ({movies.filter(m => (m.added_by || '').includes('Nekol')).length})</span>
         </button>
       </div>
 
@@ -298,11 +351,26 @@ export default function Watchlist({ movies }) {
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-pink-500/20 text-pink-500 border border-pink-500/30">
+                  {/* Attribution Badge */}
+                  {movie.added_by?.includes('Migz') && !movie.added_by?.includes('Nekol') ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                      🐧 Added by Migz
+                    </span>
+                  ) : movie.added_by?.includes('Nekol') && !movie.added_by?.includes('Migz') ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-500/15 text-pink-400 border border-pink-500/30">
+                      🖤 Added by Nekol
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                      💕 Added by Both
+                    </span>
+                  )}
+
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-pink-500/20 text-pink-500 border border-pink-500/30">
                     {movie.genre}
                   </span>
                   {movie.streaming && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-500/20 text-slate-400">
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-500/20 text-slate-400">
                       📺 {movie.streaming}
                     </span>
                   )}
@@ -349,8 +417,56 @@ export default function Watchlist({ movies }) {
               </p>
             )}
 
+            {/* Live Couple Reactions Bar */}
+            <div className="mt-3 pt-2.5 border-t border-slate-500/15 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-[10px] font-bold opacity-60 mr-1">React:</span>
+                {[
+                  { emoji: '🍿', text: "Let's watch!" },
+                  { emoji: '😍', text: "Must see!" },
+                  { emoji: '😴', text: "Pass muna" }
+                ].map((reaction) => {
+                  const isSelected = movie.reactions?.[activeProfile] === reaction.emoji;
+                  return (
+                    <button
+                      key={reaction.emoji}
+                      type="button"
+                      onClick={async () => {
+                        playPop();
+                        await toggleMovieReaction(movie.id, activeProfile, reaction.emoji);
+                      }}
+                      className={`px-2 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1 ${
+                        isSelected
+                          ? 'bg-pink-500 text-white border-pink-500 shadow-sm scale-105'
+                          : isKuromi
+                            ? 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-pink-500/40'
+                            : 'bg-slate-100 border-slate-200 text-slate-700 hover:border-pink-300'
+                      }`}
+                      title={`${reaction.text} (React as ${activeProfile})`}
+                    >
+                      <span>{reaction.emoji}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Display Partner & User Active Reactions */}
+              <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                {movie.reactions?.Migz && (
+                  <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    🐧 Migz: {movie.reactions.Migz}
+                  </span>
+                )}
+                {movie.reactions?.Nekol && (
+                  <span className="px-2 py-0.5 rounded-md bg-pink-500/15 text-pink-400 border border-pink-500/30">
+                    🖤 Nekol: {movie.reactions.Nekol}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* Heart Rating Bar */}
-            <div className="mt-4 pt-3 border-t border-slate-500/20 flex items-center justify-between">
+            <div className="mt-2.5 pt-2 border-t border-slate-500/10 flex items-center justify-between">
               <span className="text-xs font-bold opacity-60">
                 {movie.watched ? 'Couple Rating:' : 'Anticipation Level:'}
               </span>
@@ -659,6 +775,34 @@ export default function Watchlist({ movies }) {
             )}
 
             <form onSubmit={handleAddMovie} className="space-y-4 text-xs sm:text-sm">
+              <div className="flex items-center justify-between p-2.5 rounded-xl border border-pink-500/30 bg-pink-500/10">
+                <span className="font-bold text-xs">Adding to Watchlist as:</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { playPop(); setAddedBySelect('Migz'); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      addedBySelect === 'Migz'
+                        ? 'bg-sky-500 text-white shadow-sm'
+                        : 'bg-transparent opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    🐧 Migz
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { playPop(); setAddedBySelect('Nekol'); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      addedBySelect === 'Nekol'
+                        ? 'bg-pink-500 text-white shadow-sm'
+                        : 'bg-transparent opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    🖤 Nekol
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block font-bold mb-1 opacity-90">Movie / Series Title</label>
                 <input

@@ -6,8 +6,11 @@ import { setUserVerified } from '../utils/storage';
 import { useTheme } from '../context/ThemeContext';
 import { THEME_ASSETS } from '../data/themeAssets';
 
+import { useProfile } from '../context/ProfileContext';
+
 export default function GatekeeperModal({ onVerified }) {
   const { isKuromi } = useTheme();
+  const { setActiveProfile } = useProfile();
   const [intruderMode, setIntruderMode] = useState(false);
   const [soundMuted, setSoundMuted] = useState(false);
   const [noButtonPos, setNoButtonPos] = useState({ x: 0, y: 0 });
@@ -30,17 +33,18 @@ export default function GatekeeperModal({ onVerified }) {
     }
   };
 
-  // User clicked YES
-  const handleYes = () => {
+  // User clicked YES - either Nekol or Migz
+  const handleSelectIdentity = (profile) => {
     stopIntruderSiren();
     playSuccessFanfare();
+    setActiveProfile(profile);
 
     // Trigger full screen confetti burst
     confetti({
       particleCount: 130,
       spread: 90,
       origin: { y: 0.6 },
-      colors: isKuromi 
+      colors: profile === 'Nekol'
         ? ['#f43f5e', '#ec4899', '#a855f7', '#c084fc', '#ffffff'] 
         : ['#38bdf8', '#0284c7', '#fb923c', '#ffffff', '#fda4af']
     });
@@ -49,9 +53,9 @@ export default function GatekeeperModal({ onVerified }) {
     onVerified();
   };
 
-  const handleRedeem = () => {
+  const handleRedeem = (profile = 'Nekol') => {
     stopIntruderSiren();
-    handleYes();
+    handleSelectIdentity(profile);
   };
 
   const toggleSound = () => {
@@ -82,7 +86,7 @@ export default function GatekeeperModal({ onVerified }) {
             />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold font-heading mb-2 tracking-wide text-pink-500">
+          <h2 className="text-2xl sm:text-3xl font-extrabold font-heading mb-1 tracking-wide text-pink-500">
             Halt! Identity Verification 👮‍♂️
           </h2>
 
@@ -90,41 +94,47 @@ export default function GatekeeperModal({ onVerified }) {
             Welcome to <strong>Migz X Nekol</strong> Sanctuary
           </p>
 
-          <div className={`p-4 rounded-2xl mb-6 text-base sm:text-lg font-bold border ${
+          <div className={`p-4 rounded-2xl mb-5 text-sm sm:text-base font-bold border ${
             isKuromi 
               ? 'bg-purple-950/60 border-purple-800 text-pink-200' 
               : 'bg-rose-50 border-rose-200 text-rose-950'
           }`}>
-            Are you <span className="font-extrabold underline decoration-pink-500 decoration-wavy text-pink-500">Nekol my bebe lablab</span>? 🥺👉👈
+            Who is accessing our sanctuary today? 🥺👉👈
           </div>
 
           {evasionCount > 0 && evasionCount < 5 && (
             <p className="text-xs text-pink-500 font-bold mb-3 animate-pulse">
-              Nice try! The "No" button is actively dodging your cursor! 😂
+              Nice try! The stranger button is actively dodging your cursor! 😂
             </p>
           )}
 
           {evasionCount >= 5 && (
             <p className="text-xs text-purple-400 font-bold mb-3">
-              Why are you trying so hard to click No? Aminin mo na, ikaw si Nekol! 😤
+              Why are you trying so hard to dodge? Aminin mo na kung sino ka! 😤
             </p>
           )}
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative min-h-[90px]">
-            {/* The YES Button */}
+          {/* Identity Buttons */}
+          <div className="space-y-2.5 mb-4">
             <button
-              onClick={handleYes}
-              className={`w-full sm:w-auto px-6 py-3.5 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 shadow-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
-                isKuromi
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:from-pink-600 hover:to-purple-700 shadow-pink-500/25'
-                  : 'bg-gradient-to-r from-sky-400 to-blue-500 text-white hover:from-sky-500 hover:to-blue-600 shadow-sky-500/25'
-              }`}
+              onClick={() => handleSelectIdentity('Nekol')}
+              className="w-full py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 text-white bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 shadow-lg shadow-pink-500/25 transition-all transform hover:scale-[1.02] active:scale-95"
             >
-              <Heart className="w-5 h-5 fill-current animate-pulse" />
-              Yes, it's me bebe! 🥰
+              <Heart className="w-5 h-5 fill-current animate-pulse text-white" />
+              <span>I'm Nekol my bebe! 🖤✨</span>
             </button>
 
-            {/* The RUNAWAY NO Button */}
+            <button
+              onClick={() => handleSelectIdentity('Migz')}
+              className="w-full py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 text-white bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 hover:from-sky-500 hover:to-blue-600 shadow-lg shadow-sky-500/25 transition-all transform hover:scale-[1.02] active:scale-95"
+            >
+              <span>🐧</span>
+              <span>I'm Migz! 🐧❄️</span>
+            </button>
+          </div>
+
+          {/* The RUNAWAY STRANGER Button */}
+          <div className="relative min-h-[50px] flex items-center justify-center">
             <button
               onMouseEnter={handleNoButtonHover}
               onTouchStart={handleNoButtonHover}
@@ -133,13 +143,13 @@ export default function GatekeeperModal({ onVerified }) {
                 transform: `translate(${noButtonPos.x}px, ${noButtonPos.y}px)`,
                 transition: 'transform 0.15s ease-out'
               }}
-              className={`w-full sm:w-auto px-5 py-3 rounded-2xl font-bold text-sm transition-colors ${
+              className={`px-4 py-2 rounded-xl font-bold text-xs transition-colors ${
                 isKuromi
-                  ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                  ? 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
               }`}
             >
-              No, not me 👻
+              I'm neither / stranger 👻
             </button>
           </div>
 
@@ -197,18 +207,26 @@ export default function GatekeeperModal({ onVerified }) {
           <div className="bg-slate-900/90 border border-slate-700 rounded-2xl p-5 mb-4">
             <h3 className="font-bold text-sm text-pink-300 mb-2 flex items-center justify-center gap-1.5">
               <Sparkles className="w-4 h-4 text-pink-400" />
-              Wait... are you actually Nekol playing a prank on Migz? 🥺
+              Wait... are you actually teasing with a prank? 🥺
             </h3>
-            <p className="text-xs text-slate-300 mb-4">
-              If you really are Nekol, tap below to disarm the alarm:
+            <p className="text-xs text-slate-300 mb-3">
+              If you are Nekol or Migz, tap below to disarm the alarm:
             </p>
 
-            <button
-              onClick={handleRedeem}
-              className="w-full py-3.5 px-4 rounded-xl font-bold text-sm sm:text-base bg-gradient-to-r from-pink-500 via-purple-600 to-pink-500 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg shadow-pink-500/30 transition-all transform hover:scale-[1.02] active:scale-95"
-            >
-              Wait wait! Ako pala talaga si Nekol! I was teasing Migz! 🥺👉👈💕
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleRedeem('Nekol')}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg shadow-pink-500/30 transition-all transform hover:scale-[1.02] active:scale-95"
+              >
+                Wait! Ako talaga si Nekol! Teasing Migz lang! 🥺👉👈💕
+              </button>
+              <button
+                onClick={() => handleRedeem('Migz')}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white shadow-lg shadow-sky-500/30 transition-all transform hover:scale-[1.02] active:scale-95"
+              >
+                Wait! Ako si Migz! Accidental click lang! 🐧❄️
+              </button>
+            </div>
           </div>
 
           <p className="text-[11px] text-slate-400">

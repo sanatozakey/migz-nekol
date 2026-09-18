@@ -13,6 +13,7 @@ export default function MovieRoulette() {
   const mascotImg = isKuromi ? THEME_ASSETS.kuromi.movies : THEME_ASSETS.penguin.movies;
   const [movies, setMovies] = useState([]);
   const [selectedGenre, setSelectedGenre] = useState('All Genres');
+  const [profilePool, setProfilePool] = useState('all'); // 'all', 'Migz', 'Nekol'
   const [viewMode, setViewMode] = useState('roulette'); // 'roulette' or 'watchlist'
   
   // Roulette spinning state
@@ -33,11 +34,16 @@ export default function MovieRoulette() {
     return () => unsub();
   }, []);
 
-  // Filter unwatched movies by selected genre
+  // Filter unwatched movies by partner pool and selected genre
   const unwatchedMovies = movies.filter(m => !m.watched);
+  const poolMovies = unwatchedMovies.filter(m => {
+    if (profilePool === 'all') return true;
+    return (m.added_by || 'Migz & Nekol').toLowerCase().includes(profilePool.toLowerCase());
+  });
+
   const filteredCandidates = selectedGenre === 'All Genres' 
-    ? unwatchedMovies 
-    : unwatchedMovies.filter(m => m.genre === selectedGenre);
+    ? poolMovies 
+    : poolMovies.filter(m => m.genre === selectedGenre);
 
   // Spin Roulette Wheel / Randomizer
   const handleSpin = () => {
@@ -153,31 +159,77 @@ export default function MovieRoulette() {
       </div>
 
       {viewMode === 'roulette' ? (
-        <div className="space-y-6">
-          {/* Genre Filter Pills */}
-          <div className="overflow-x-auto pb-2 scrollbar-none">
-            <div className="flex items-center gap-2 min-w-max">
-              <span className="text-xs font-black mr-1 flex items-center gap-1 opacity-80">
-                <ListFilter className="w-3.5 h-3.5" /> Genre:
-              </span>
-              {MOVIE_GENRES.map(genre => (
-                <button
-                  key={genre}
-                  disabled={isSpinning}
-                  onClick={() => { playPop(); setSelectedGenre(genre); setSelectedMovie(null); }}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    selectedGenre === genre
-                      ? isKuromi
-                        ? 'bg-pink-500 text-white shadow-sm shadow-pink-500/30 scale-105'
-                        : 'bg-sky-500 text-white shadow-sm shadow-sky-400/30 scale-105'
-                      : isKuromi
-                        ? 'bg-[#181426] border border-[#382d54] text-slate-300 hover:border-pink-400/50'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:border-sky-300'
-                  }`}
-                >
-                  {genre}
-                </button>
-              ))}
+        <div className="space-y-4 sm:space-y-6">
+          {/* Partner Pool & Genre Filter Controls */}
+          <div className="space-y-2.5">
+            {/* Partner Pool Filter */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap text-xs font-bold">
+              <span className="text-[11px] opacity-70 mr-1">Spin From Pool:</span>
+              <button
+                type="button"
+                disabled={isSpinning}
+                onClick={() => { playPop(); setProfilePool('all'); setSelectedMovie(null); }}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  profilePool === 'all'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'opacity-60 hover:opacity-100'
+                }`}
+              >
+                Both of Us 💕 ({unwatchedMovies.length})
+              </button>
+              <button
+                type="button"
+                disabled={isSpinning}
+                onClick={() => { playPop(); setProfilePool('Migz'); setSelectedMovie(null); }}
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                  profilePool === 'Migz'
+                    ? 'bg-sky-500 text-white shadow-sm'
+                    : 'opacity-60 hover:opacity-100 text-sky-500'
+                }`}
+              >
+                <span>🐧</span>
+                <span>Migz's Only ({unwatchedMovies.filter(m => (m.added_by || '').includes('Migz')).length})</span>
+              </button>
+              <button
+                type="button"
+                disabled={isSpinning}
+                onClick={() => { playPop(); setProfilePool('Nekol'); setSelectedMovie(null); }}
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                  profilePool === 'Nekol'
+                    ? 'bg-pink-500 text-white shadow-sm'
+                    : 'opacity-60 hover:opacity-100 text-pink-500'
+                }`}
+              >
+                <span>🖤</span>
+                <span>Nekol's Only ({unwatchedMovies.filter(m => (m.added_by || '').includes('Nekol')).length})</span>
+              </button>
+            </div>
+
+            {/* Genre Filter Pills */}
+            <div className="overflow-x-auto pb-2 scrollbar-none">
+              <div className="flex items-center gap-2 min-w-max">
+                <span className="text-xs font-black mr-1 flex items-center gap-1 opacity-80">
+                  <ListFilter className="w-3.5 h-3.5" /> Genre:
+                </span>
+                {MOVIE_GENRES.map(genre => (
+                  <button
+                    key={genre}
+                    disabled={isSpinning}
+                    onClick={() => { playPop(); setSelectedGenre(genre); setSelectedMovie(null); }}
+                    className={`px-3 py-1.2 rounded-full text-xs font-bold transition-all ${
+                      selectedGenre === genre
+                        ? isKuromi
+                          ? 'bg-pink-500 text-white shadow-sm shadow-pink-500/30 scale-105'
+                          : 'bg-sky-500 text-white shadow-sm shadow-sky-400/30 scale-105'
+                        : isKuromi
+                          ? 'bg-[#181426] border border-[#382d54] text-slate-300 hover:border-pink-400/50'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:border-sky-300'
+                    }`}
+                  >
+                    {genre}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -197,7 +249,18 @@ export default function MovieRoulette() {
             }`}>
               {highlightedMovie ? (
                 <div className={`space-y-3 transition-all ${isSpinning ? 'opacity-80 scale-95' : 'opacity-100 scale-100'}`}>
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    {/* Attribution Badge */}
+                    {highlightedMovie.added_by?.includes('Migz') && !highlightedMovie.added_by?.includes('Nekol') ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                        🐧 Migz's Pick
+                      </span>
+                    ) : highlightedMovie.added_by?.includes('Nekol') && !highlightedMovie.added_by?.includes('Migz') ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-pink-500/15 text-pink-400 border border-pink-500/30">
+                        🖤 Nekol's Pick
+                      </span>
+                    ) : null}
+
                     <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-pink-500/20 text-pink-500 border border-pink-500/30">
                       {highlightedMovie.genre}
                     </span>

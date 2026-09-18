@@ -11,6 +11,7 @@ export default function ExpenseTracker() {
   const { isKuromi } = useTheme();
   const [expenses, setExpenses] = useState([]);
   const [filterCategory, setFilterCategory] = useState('all');
+  const [partnerFilter, setPartnerFilter] = useState('all'); // 'all', 'Nekol', 'Migz'
   const [budgetPeriod, setBudgetPeriod] = useState('month'); // 'month', 'week', 'day', 'all'
   const [budgetTargets, setBudgetTargets] = useState({ monthly: 10000, weekly: 2500, daily: 500 });
   const [showAddModal, setShowAddModal] = useState(false);
@@ -133,7 +134,15 @@ export default function ExpenseTracker() {
       matchCategory = (e.category === filterCategory);
     }
 
-    return matchPeriod && matchCategory;
+    // 3. Partner match
+    let matchPartner = true;
+    if (partnerFilter === 'Nekol') {
+      matchPartner = (e.logged_by === 'Nekol' || (e.paid_by && e.paid_by.includes('Nekol')));
+    } else if (partnerFilter === 'Migz') {
+      matchPartner = (e.logged_by === 'Migz' || (e.paid_by && e.paid_by.includes('Migz')));
+    }
+
+    return matchPeriod && matchCategory && matchPartner;
   });
 
   const mascotImg = isKuromi ? THEME_ASSETS.kuromi.gastos : THEME_ASSETS.penguin.gastos;
@@ -384,34 +393,59 @@ export default function ExpenseTracker() {
         </div>
       </div>
 
-      {/* Category Filter Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        <button
-          type="button"
-          onClick={() => { playPop(); setFilterCategory('all'); }}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
-            filterCategory === 'all'
-              ? isKuromi ? 'bg-pink-600 text-white shadow-sm' : 'bg-sky-500 text-white shadow-sm'
-              : isKuromi ? 'bg-slate-900 text-slate-300 hover:text-white border border-purple-900/40' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
-          }`}
-        >
-          All Categories
-        </button>
+      {/* Partner & Category Filter Pills */}
+      <div className="space-y-2">
+        {/* Partner Attribution Filter */}
+        <div className="flex items-center gap-2">
+          {[
+            { id: 'all', label: 'All Expenses 💕' },
+            { id: 'Nekol', label: "Nekol's 🖤" },
+            { id: 'Migz', label: "Migz's 🐧" }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => { playPop(); setPartnerFilter(tab.id); }}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                partnerFilter === tab.id
+                  ? isKuromi ? 'bg-pink-600 text-white shadow-sm' : 'bg-sky-500 text-white shadow-sm'
+                  : isKuromi ? 'bg-purple-950/40 text-purple-200 border border-purple-900/60' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-        {EXPENSE_CATEGORIES.map(cat => (
+        {/* Category Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
-            key={cat.id}
-            onClick={() => { playPop(); setFilterCategory(cat.id); }}
+            onClick={() => { playPop(); setFilterCategory('all'); }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
-              filterCategory === cat.id
+              filterCategory === 'all'
                 ? isKuromi ? 'bg-pink-600 text-white shadow-sm' : 'bg-sky-500 text-white shadow-sm'
                 : isKuromi ? 'bg-slate-900 text-slate-300 hover:text-white border border-purple-900/40' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
             }`}
           >
-            {cat.label}
+            All Categories
           </button>
-        ))}
+
+          {EXPENSE_CATEGORIES.map(cat => (
+            <button
+              type="button"
+              key={cat.id}
+              onClick={() => { playPop(); setFilterCategory(cat.id); }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+                filterCategory === cat.id
+                  ? isKuromi ? 'bg-pink-600 text-white shadow-sm' : 'bg-sky-500 text-white shadow-sm'
+                  : isKuromi ? 'bg-slate-900 text-slate-300 hover:text-white border border-purple-900/40' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Expense List Header with Active Filters Indicator */}
@@ -419,6 +453,7 @@ export default function ExpenseTracker() {
         <span>
           Showing {displayedExpenses.length} {displayedExpenses.length === 1 ? 'expense' : 'expenses'} for {budgetPeriod === 'month' ? 'This Month' : budgetPeriod === 'week' ? 'This Week' : budgetPeriod === 'day' ? 'Today' : 'All Time'}
           {filterCategory !== 'all' ? ` (${filterCategory})` : ''}
+          {partnerFilter !== 'all' ? ` • ${partnerFilter}'s` : ''}
         </span>
         {displayedExpenses.length > 0 && (
           <span>Total: ₱ {displayedExpenses.reduce((s, i) => s + (Number(i.amount) || 0), 0).toLocaleString()}</span>
@@ -449,6 +484,16 @@ export default function ExpenseTracker() {
                     isKuromi ? 'bg-purple-950/60 text-purple-300 border border-purple-800/40' : 'bg-sky-50 text-sky-700 border border-sky-200'
                   }`}>
                     {item.paid_by}
+                  </span>
+                )}
+
+                {item.logged_by && (
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                    item.logged_by === 'Nekol'
+                      ? 'bg-pink-500/15 text-pink-400 border border-pink-500/30'
+                      : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
+                  }`}>
+                    Logged by {item.logged_by} {item.logged_by === 'Nekol' ? '🖤' : '🐧'}
                   </span>
                 )}
 

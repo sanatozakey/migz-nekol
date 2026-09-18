@@ -6,6 +6,9 @@ import MovieRoulette from './components/movies/MovieRoulette';
 import FoodPicker from './components/food/FoodPicker';
 import ExpenseTracker from './components/expenses/ExpenseTracker';
 import CalendarView from './components/calendar/CalendarView';
+import CoupleMoodBar from './components/couple/CoupleMoodBar';
+import LoveCouponsModal from './components/couple/LoveCouponsModal';
+import LovePingOverlay from './components/common/LovePingOverlay';
 import { useTheme } from './context/ThemeContext';
 import { isUserVerified, setUserVerified } from './utils/storage';
 
@@ -13,6 +16,7 @@ export default function App() {
   const { isKuromi } = useTheme();
   const [verified, setVerified] = useState(false);
   const [activeTab, setActiveTab] = useState('movies');
+  const [showCouponsModal, setShowCouponsModal] = useState(false);
 
   useEffect(() => {
     setVerified(isUserVerified());
@@ -29,16 +33,31 @@ export default function App() {
         ? 'bg-kuromi-dark text-slate-100' 
         : 'bg-gradient-to-b from-sky-50/80 via-white to-sky-50/40 text-slate-800'
     }`}>
+      {/* Real-time Love Ping Toast & Confetti Overlay */}
+      <LovePingOverlay />
+
+      {/* Love Coupons Dialog */}
+      <LoveCouponsModal 
+        isOpen={showCouponsModal} 
+        onClose={() => setShowCouponsModal(false)} 
+      />
+
       {/* Identity Gatekeeper Prompt */}
       {!verified && (
         <GatekeeperModal onVerified={() => setVerified(true)} />
       )}
 
       {/* App Header */}
-      <Header onResetGatekeeper={handleResetGatekeeper} />
+      <Header 
+        onResetGatekeeper={handleResetGatekeeper} 
+        onOpenCoupons={() => setShowCouponsModal(true)} 
+      />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-24 sm:pb-12">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-3 sm:py-5 pb-24 sm:pb-12">
+        {/* Live Couple Mood & Status Banner */}
+        <CoupleMoodBar onOpenCoupons={() => setShowCouponsModal(true)} />
+
         {/* Navigation Tabs */}
         <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
 

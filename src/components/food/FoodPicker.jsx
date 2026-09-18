@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { Utensils, Dices, Search, Plus, Sparkles, MapPin, RefreshCw, Link as LinkIcon, Navigation as NavIcon, CheckCircle2, ShieldCheck, X, Check, Compass, Loader2, Layers, ListPlus, ExternalLink } from 'lucide-react';
+import { Utensils, Dices, Search, Plus, Sparkles, MapPin, RefreshCw, Link as LinkIcon, Navigation as NavIcon, CheckCircle2, ShieldCheck, X, Check, Compass, Loader2, Layers, ListPlus, ExternalLink, Heart } from 'lucide-react';
 import { BUDGET_OPTIONS, GUTOM_OPTIONS, PAGOD_OPTIONS } from '../../data/defaultFoodSpots';
 import { getFoodSpots, saveFoodSpot, saveFoodSpotsBatch, subscribeStorage } from '../../utils/storage';
 import { analyzeFoodInput } from '../../utils/smartParsers';
 import { calculateDistanceKm, getStoredLocation, getStoredPermission, setStoredPermission, requestUserLocation } from '../../utils/locationService';
 import { playTick, playSuccessFanfare, playPop } from '../../lib/soundEffects';
 import { useTheme } from '../../context/ThemeContext';
+import { useProfile } from '../../context/ProfileContext';
 import { THEME_ASSETS } from '../../data/themeAssets';
 import SpotCard from './SpotCard';
 import EmbeddedMapModal from './EmbeddedMapModal';
 
 export default function FoodPicker() {
   const { isKuromi } = useTheme();
+  const { activeProfile } = useProfile();
   const [spots, setSpots] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -23,9 +25,11 @@ export default function FoodPicker() {
   const [locationStatus, setLocationStatus] = useState('');
 
   // Filters
+  const [partnerFilter, setPartnerFilter] = useState('all'); // 'all', 'Nekol', 'Migz'
   const [budgetFilter, setBudgetFilter] = useState('all');
   const [gutomFilter, setGutomFilter] = useState('all');
   const [pagodFilter, setPagodFilter] = useState('all');
+  const [cravedBySelect, setCravedBySelect] = useState(activeProfile);
 
   // Randomizer state
   const [isPicking, setIsPicking] = useState(false);
@@ -195,6 +199,7 @@ export default function FoodPicker() {
         rating: 4.8,
         review_count: 1400,
         top_dish: r.top_dish || 'House Specialty',
+        added_by: cravedBySelect || activeProfile,
         notes: `Extracted from "${detectedList.listTitle}" 💕`,
         google_maps_query: `${r.name} ${r.address || r.area}`
       }));
@@ -238,6 +243,7 @@ export default function FoodPicker() {
       rating: 4.8,
       review_count: 1200,
       top_dish: r.top_dish || 'House Specialty',
+      added_by: cravedBySelect || activeProfile,
       notes: `Discovered in ${detectedList?.listTitle || 'Food Guide'} 💕`,
       google_maps_query: `${r.name} ${r.address || r.area}`
     };
@@ -280,11 +286,12 @@ export default function FoodPicker() {
         spot.cuisine.toLowerCase().includes(searchQuery.toLowerCase()) ||
         spot.area.toLowerCase().includes(searchQuery.toLowerCase());
 
+      const matchesPartner = partnerFilter === 'all' || (spot.added_by || 'Migz & Nekol').toLowerCase().includes(partnerFilter.toLowerCase());
       const matchesBudget = budgetFilter === 'all' || spot.budget === budgetFilter;
       const matchesGutom = gutomFilter === 'all' || spot.gutom_level === gutomFilter;
       const matchesPagod = pagodFilter === 'all' || spot.pagod_level === pagodFilter;
 
-      return matchesSearch && matchesBudget && matchesGutom && matchesPagod;
+      return matchesSearch && matchesPartner && matchesBudget && matchesGutom && matchesPagod;
     });
 
     // If user location is enabled, sort spots by proximity (closest branches first)
@@ -297,7 +304,7 @@ export default function FoodPicker() {
     }
 
     return result;
-  }, [spotsWithDistance, searchQuery, budgetFilter, gutomFilter, pagodFilter, userLocation]);
+  }, [spotsWithDistance, searchQuery, partnerFilter, budgetFilter, gutomFilter, pagodFilter, userLocation]);
 
   // Random Decision Maker
   const handlePickSpot = () => {
@@ -367,6 +374,7 @@ export default function FoodPicker() {
       rating: 4.9,
       review_count: 1200,
       top_dish: newTopDish.trim() || 'Signature House Special',
+      added_by: cravedBySelect || activeProfile,
       notes: newNotes.trim() || 'Added to Migz & Nekol date spots 💕',
       google_maps_query: `${newName.trim()} ${finalAddress}`
     };
@@ -552,8 +560,48 @@ export default function FoodPicker() {
           />
         </div>
 
-        {/* Filter Pills: Budget, Gutom Level, Pagod Level */}
+        {/* Filter Pills: Partner, Budget, Gutom Level, Pagod Level */}
         <div className="space-y-2 text-xs">
+          {/* Partner Filter */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <span className="font-bold opacity-60 shrink-0 mr-1">Partner:</span>
+            <button
+              type="button"
+              onClick={() => { playPop(); setPartnerFilter('all'); }}
+              className={`px-3 py-1 rounded-xl font-bold shrink-0 transition-all ${
+                partnerFilter === 'all'
+                  ? isKuromi ? 'bg-purple-600 text-white' : 'bg-slate-800 text-white'
+                  : isKuromi ? 'bg-slate-900 text-slate-400 border border-purple-900/40' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              All Spots ({spots.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => { playPop(); setPartnerFilter('Nekol'); }}
+              className={`px-3 py-1 rounded-xl font-bold shrink-0 transition-all flex items-center gap-1 ${
+                partnerFilter === 'Nekol'
+                  ? 'bg-pink-500 text-white shadow-sm'
+                  : isKuromi ? 'bg-slate-900 text-pink-400 border border-purple-900/40' : 'bg-slate-100 text-pink-600'
+              }`}
+            >
+              <span>🖤</span>
+              <span>Nekol's Cravings ({spots.filter(s => (s.added_by || '').includes('Nekol')).length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { playPop(); setPartnerFilter('Migz'); }}
+              className={`px-3 py-1 rounded-xl font-bold shrink-0 transition-all flex items-center gap-1 ${
+                partnerFilter === 'Migz'
+                  ? 'bg-sky-500 text-white shadow-sm'
+                  : isKuromi ? 'bg-slate-900 text-sky-400 border border-purple-900/40' : 'bg-slate-100 text-sky-600'
+              }`}
+            >
+              <span>🐧</span>
+              <span>Migz's Picks ({spots.filter(s => (s.added_by || '').includes('Migz')).length})</span>
+            </button>
+          </div>
+
           {/* Budget */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             <span className="font-bold opacity-60 shrink-0 mr-1">Budget:</span>
@@ -874,6 +922,46 @@ export default function FoodPicker() {
             )}
 
             <form onSubmit={handleAddSpotSubmit} className="space-y-4 text-xs sm:text-sm">
+              {/* Partner Attribution Selector */}
+              <div>
+                <label className="block font-bold mb-1 opacity-90">Craving Added By</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { playPop(); setCravedBySelect('Nekol'); }}
+                    className={`flex-1 py-2 px-3 rounded-xl font-black text-xs border flex items-center justify-center gap-1.5 transition-all ${
+                      cravedBySelect === 'Nekol'
+                        ? 'bg-pink-500/20 border-pink-500 text-pink-400 shadow-sm'
+                        : isKuromi ? 'border-purple-900/60 bg-purple-950/40 text-purple-300 opacity-60' : 'border-slate-200 bg-slate-50 text-slate-600 opacity-60'
+                    }`}
+                  >
+                    <span>🖤 Nekol</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { playPop(); setCravedBySelect('Migz'); }}
+                    className={`flex-1 py-2 px-3 rounded-xl font-black text-xs border flex items-center justify-center gap-1.5 transition-all ${
+                      cravedBySelect === 'Migz'
+                        ? 'bg-sky-500/20 border-sky-500 text-sky-400 shadow-sm'
+                        : isKuromi ? 'border-purple-900/60 bg-purple-950/40 text-purple-300 opacity-60' : 'border-slate-200 bg-slate-50 text-slate-600 opacity-60'
+                    }`}
+                  >
+                    <span>🐧 Migz</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { playPop(); setCravedBySelect('Migz & Nekol'); }}
+                    className={`flex-1 py-2 px-3 rounded-xl font-black text-xs border flex items-center justify-center gap-1.5 transition-all ${
+                      cravedBySelect === 'Migz & Nekol'
+                        ? 'bg-purple-500/20 border-purple-500 text-purple-300 shadow-sm'
+                        : isKuromi ? 'border-purple-900/60 bg-purple-950/40 text-purple-300 opacity-60' : 'border-slate-200 bg-slate-50 text-slate-600 opacity-60'
+                    }`}
+                  >
+                    <span>💕 Both</span>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block font-bold mb-1 opacity-90">Place / Restaurant / Milktea Name</label>
                 <input

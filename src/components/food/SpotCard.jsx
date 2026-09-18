@@ -1,10 +1,13 @@
 import React from 'react';
-import { Star, MapPin, ExternalLink, Utensils, Award, Navigation as NavigationIcon } from 'lucide-react';
+import { Star, MapPin, ExternalLink, Utensils, Award, Navigation as NavigationIcon, Heart } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useProfile } from '../../context/ProfileContext';
+import { toggleFoodReaction } from '../../utils/storage';
 import { playPop } from '../../lib/soundEffects';
 
 export default function SpotCard({ spot, isWinner, onOpenMap }) {
   const { isKuromi } = useTheme();
+  const { activeProfile } = useProfile();
 
   return (
     <div className={`relative p-5 rounded-3xl border transition-all duration-300 ${
@@ -27,6 +30,21 @@ export default function SpotCard({ spot, isWinner, onOpenMap }) {
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap text-[11px]">
+            {/* Attribution Badge */}
+            {spot.added_by?.includes('Nekol') && !spot.added_by?.includes('Migz') ? (
+              <span className="px-2 py-0.5 rounded-full font-black bg-pink-500/15 text-pink-400 border border-pink-500/30">
+                🖤 Craved by Nekol
+              </span>
+            ) : spot.added_by?.includes('Migz') && !spot.added_by?.includes('Nekol') ? (
+              <span className="px-2 py-0.5 rounded-full font-black bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                🐧 Suggested by Migz
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-full font-black bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                💕 Couple Spot
+              </span>
+            )}
+
             <span className="px-2.5 py-0.5 rounded-md font-bold bg-pink-500/20 text-pink-500 border border-pink-500/30">
               {spot.cuisine}
             </span>
@@ -89,8 +107,56 @@ export default function SpotCard({ spot, isWinner, onOpenMap }) {
         </p>
       )}
 
+      {/* Live Couple Reactions */}
+      <div className="mt-3 pt-2.5 border-t border-slate-500/15 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-[10px] font-bold opacity-60 mr-1">React:</span>
+          {[
+            { emoji: '🤤', text: 'Craving this!' },
+            { emoji: '💳', text: 'Libre ko!' },
+            { emoji: '💕', text: 'Date here soon!' }
+          ].map((reaction) => {
+            const isSelected = spot.reactions?.[activeProfile] === reaction.emoji;
+            return (
+              <button
+                key={reaction.emoji}
+                type="button"
+                onClick={async () => {
+                  playPop();
+                  await toggleFoodReaction(spot.id, activeProfile, reaction.emoji);
+                }}
+                className={`px-2 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1 ${
+                  isSelected
+                    ? 'bg-pink-500 text-white border-pink-500 shadow-sm scale-105'
+                    : isKuromi
+                      ? 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-pink-500/40'
+                      : 'bg-slate-100 border-slate-200 text-slate-700 hover:border-pink-300'
+                }`}
+                title={`${reaction.text} (React as ${activeProfile})`}
+              >
+                <span>{reaction.emoji}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Display Partner & User Active Reactions */}
+        <div className="flex items-center gap-1.5 text-[11px] font-bold">
+          {spot.reactions?.Migz && (
+            <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-400 border border-sky-500/30">
+              🐧 Migz: {spot.reactions.Migz}
+            </span>
+          )}
+          {spot.reactions?.Nekol && (
+            <span className="px-2 py-0.5 rounded-md bg-pink-500/15 text-pink-400 border border-pink-500/30">
+              🖤 Nekol: {spot.reactions.Nekol}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Footer & In-App Directions */}
-      <div className="mt-4 pt-3 border-t border-slate-200/20 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-3 pt-2.5 border-t border-slate-200/20 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[11px] font-bold opacity-75">
           <span>Gutom: <strong className="capitalize">{spot.gutom_level}</strong></span>
           <span>•</span>

@@ -8,7 +8,9 @@ const KEYS = {
   EXPENSES: 'lablab_expenses_v1',
   MEMORIES: 'lablab_memories_v1',
   GATEKEEPER: 'lablab_verified_nekol_v1',
-  BUDGET: 'lablab_budget_targets_v1'
+  BUDGET: 'lablab_budget_targets_v1',
+  COUPLE_STATUS: 'lablab_couple_status_v1',
+  COUPONS: 'lablab_coupons_v1'
 };
 
 // Listeners for reactive updates
@@ -23,11 +25,25 @@ export function notify() {
   });
 }
 
-// Real-time synchronization: listen for database changes from either partner's phone
+// Love Ping Real-time broadcast listeners
+const lovePingListeners = new Set();
+export function subscribeLovePings(callback) {
+  lovePingListeners.add(callback);
+  return () => lovePingListeners.delete(callback);
+}
+export function notifyLovePing(pingData) {
+  lovePingListeners.forEach(cb => {
+    try { cb(pingData); } catch (e) { console.error(e); }
+  });
+}
+
+// Global Real-time Channel
+let syncChannel = null;
 if (isSupabaseConfigured && supabase) {
   try {
-    supabase
-      .channel('lablab_realtime_sync')
+    syncChannel = supabase.channel('lablab_realtime_sync');
+    
+    syncChannel
       .on(
         'postgres_changes',
         { event: '*', schema: 'public' },
@@ -39,10 +55,17 @@ if (isSupabaseConfigured && supabase) {
             else if (table === 'lablab_expenses') await getExpenses();
             else if (table === 'lablab_memories') await getMemories();
             else if (table === 'lablab_budget') await getBudgetTargets();
+            else if (table === 'lablab_couple_status') await getCoupleStatus();
+            else if (table === 'lablab_coupons') await getCoupons();
           } catch {}
           notify();
         }
       )
+      .on('broadcast', { event: 'love_ping' }, (payload) => {
+        if (payload?.payload) {
+          notifyLovePing(payload.payload);
+        }
+      })
       .subscribe();
   } catch (err) {
     console.warn('Supabase Realtime setup notice:', err);
@@ -458,3 +481,290 @@ export async function deleteMemory(id) {
   }
   return updated;
 }
+
+// ----------------- Reactions for Movies & Food -----------------
+export async function toggleMovieReaction(movieId, profile, emoji) {
+  const current = await getMovies();
+  const index = current.findIndex(m => m.id === movieId);
+  if (index < 0) return null;
+
+  const movie = { ...current[index] };
+  const reactions = { ...(movie.reactions || {}) };
+  if (reactions[profile] === emoji) {
+    delete reactions[profile];
+  } else {
+    reactions[profile] = emoji;
+  }
+  movie.reactions = reactions;
+  await saveMovie(movie);
+  return movie;
+}
+
+export async function toggleFoodReaction(spotId, profile, emoji) {
+  const current = await getFoodSpots();
+  const index = current.findIndex(s => s.id === spotId);
+  if (index < 0) return null;
+
+  const spot = { ...current[index] };
+  const reactions = { ...(spot.reactions || {}) };
+  if (reactions[profile] === emoji) {
+    delete reactions[profile];
+  } else {
+    reactions[profile] = emoji;
+  }
+  spot.reactions = reactions;
+  await saveFoodSpot(spot);
+  return spot;
+}
+
+// ----------------- Real-Time Love Pings -----------------
+export async function sendLovePing(from, text = 'Thinking of you right now! 💕') {
+  const ping = {
+    id: `ping-${Date.now()}`,
+    from,
+    text,
+    timestamp: new Date().toISOString()
+  };
+
+  // Local notify immediately
+  notifyLovePing(ping);
+
+  if (isSupabaseConfigured && supabase && syncChannel) {
+    try {
+      await syncChannel.send({
+        type: 'broadcast',
+        event: 'love_ping',
+        payload: ping
+      });
+    } catch (e) {
+      console.warn('Love ping broadcast notice:', e);
+    }
+  }
+  return ping;
+}
+
+// ----------------- Couple Status & Moods -----------------
+const DEFAULT_COUPLE_STATUS = {
+  migz: {
+    id: 'migz',
+    partner_name: 'Migz',
+    mood: 'Craving Ramen 🍜',
+    custom_status: 'Missing my bebe Nekol! 💕',
+    battery_level: 100,
+    updated_at: new Date().toISOString()
+  },
+  nekol: {
+    id: 'nekol',
+    partner_name: 'Nekol',
+    mood: 'Craving Boba 🧋',
+    custom_status: 'Thinking of Migz 🖤',
+    battery_level: 100,
+    updated_at: new Date().toISOString()
+  }
+};
+
+export async function getCoupleStatus() {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('lablab_couple_status').select('*');
+      if (!error && data && data.length > 0) {
+        const mapped = { ...DEFAULT_COUPLE_STATUS };
+        data.forEach(item => {
+          mapped[item.id.toLowerCase()] = item;
+        });
+        localStorage.setItem(KEYS.COUPLE_STATUS, JSON.stringify(mapped));
+        return mapped;
+      }
+    } catch (e) {
+      console.warn('Supabase status fetch notice:', e);
+    }
+  }
+
+  try {
+    const raw = localStorage.getItem(KEYS.COUPLE_STATUS);
+    if (raw) return { ...DEFAULT_COUPLE_STATUS, ...JSON.parse(raw) };
+  } catch {}
+
+  return DEFAULT_COUPLE_STATUS;
+}
+
+export async function saveCoupleStatus(profile, updates) {
+  const key = profile.toLowerCase();
+  const current = await getCoupleStatus();
+  const updatedItem = {
+    ...(current[key] || DEFAULT_COUPLE_STATUS[key]),
+    ...updates,
+    id: key,
+    partner_name: profile,
+    updated_at: new Date().toISOString()
+  };
+
+  const updatedAll = {
+    ...current,
+    [key]: updatedItem
+  };
+
+  try {
+    localStorage.setItem(KEYS.COUPLE_STATUS, JSON.stringify(updatedAll));
+    notify();
+  } catch (e) {
+    console.error(e);
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('lablab_couple_status').upsert(updatedItem);
+    } catch (e) {
+      console.warn('Supabase status save notice:', e);
+    }
+  }
+
+  return updatedAll;
+}
+
+// ----------------- Love Coupons & Wishlist Jar -----------------
+export const DEFAULT_COUPONS = [
+  {
+    id: 'coup-1',
+    title: '1 Free Full-Body / Back Massage 💆',
+    category: 'Relaxation 💆',
+    emoji: '💆',
+    for_user: 'Both',
+    is_redeemed: false,
+    redeemed_by: null,
+    redeemed_at: null,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'coup-2',
+    title: 'Nekol Picks Dinner (Migz Pays, Zero Reklamo!) 🍽️',
+    category: 'Food Trip 🍽️',
+    emoji: '🍽️',
+    for_user: 'Nekol',
+    is_redeemed: false,
+    redeemed_by: null,
+    redeemed_at: null,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'coup-3',
+    title: 'Late Night McDo / Ice Cream Drive-Thru Run 🍦',
+    category: 'Midnight Craving 🍦',
+    emoji: '🍦',
+    for_user: 'Both',
+    is_redeemed: false,
+    redeemed_by: null,
+    redeemed_at: null,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'coup-4',
+    title: 'Movie Night Veto Pass (Can Change Movie Anytime) 🎬',
+    category: 'Entertainment 🎬',
+    emoji: '🎬',
+    for_user: 'Both',
+    is_redeemed: false,
+    redeemed_by: null,
+    redeemed_at: null,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'coup-5',
+    title: 'Migz Does All the Dishes & Kitchen Chores Today 🧹',
+    category: 'House Helper 🧹',
+    emoji: '🧹',
+    for_user: 'Nekol',
+    is_redeemed: false,
+    redeemed_by: null,
+    redeemed_at: null,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'coup-6',
+    title: 'Breakfast in Bed with Favorite Boba / Coffee 🧋',
+    category: 'Sweet Morning ☕',
+    emoji: '☕',
+    for_user: 'Both',
+    is_redeemed: false,
+    redeemed_by: null,
+    redeemed_at: null,
+    created_at: new Date().toISOString()
+  }
+];
+
+export async function getCoupons() {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('lablab_coupons').select('*').order('created_at', { ascending: true });
+      if (!error && data && data.length > 0) {
+        localStorage.setItem(KEYS.COUPONS, JSON.stringify(data));
+        return data;
+      }
+    } catch (e) {
+      console.warn('Supabase coupons fetch notice:', e);
+    }
+  }
+
+  try {
+    const raw = localStorage.getItem(KEYS.COUPONS);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+
+  localStorage.setItem(KEYS.COUPONS, JSON.stringify(DEFAULT_COUPONS));
+  return DEFAULT_COUPONS;
+}
+
+export async function saveCoupon(coupon) {
+  const current = await getCoupons();
+  const index = current.findIndex(c => c.id === coupon.id);
+  let updated;
+  if (index >= 0) {
+    updated = [...current];
+    updated[index] = coupon;
+  } else {
+    updated = [coupon, ...current];
+  }
+
+  localStorage.setItem(KEYS.COUPONS, JSON.stringify(updated));
+  notify();
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('lablab_coupons').upsert(coupon);
+    } catch (e) {
+      console.warn('Supabase coupon save notice:', e);
+    }
+  }
+
+  return updated;
+}
+
+export async function redeemCoupon(couponId, redeemedBy) {
+  const current = await getCoupons();
+  const index = current.findIndex(c => c.id === couponId);
+  if (index < 0) return current;
+
+  const updatedCoupon = {
+    ...current[index],
+    is_redeemed: true,
+    redeemed_by: redeemedBy,
+    redeemed_at: new Date().toISOString()
+  };
+
+  const updated = [...current];
+  updated[index] = updatedCoupon;
+
+  localStorage.setItem(KEYS.COUPONS, JSON.stringify(updated));
+  notify();
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('lablab_coupons').upsert(updatedCoupon);
+    } catch (e) {
+      console.warn('Supabase coupon redeem notice:', e);
+    }
+  }
+
+  return updated;
+}
+

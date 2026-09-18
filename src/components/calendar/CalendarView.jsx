@@ -13,6 +13,12 @@ export default function CalendarView() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'scrapbook'
+  const [scrapbookPartnerFilter, setScrapbookPartnerFilter] = useState('all'); // 'all', 'Nekol', 'Migz'
+
+  const filteredMemories = memories.filter(mem => {
+    if (scrapbookPartnerFilter === 'all') return true;
+    return mem.captured_by === scrapbookPartnerFilter;
+  });
 
   const loadData = async () => {
     const list = await getMemories();
@@ -359,26 +365,50 @@ export default function CalendarView() {
                 <span>📸</span>
               </h3>
               <p className={`text-xs font-semibold ${isKuromi ? 'text-slate-300' : 'text-slate-700'}`}>
-                Photo memories and date journal entries with Nekol ({memories.length} saved)
+                Photo memories and date journal entries with Nekol ({filteredMemories.length} saved)
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                playPop();
-                setSelectedDate(new Date().toISOString().split('T')[0]);
-              }}
-              className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 text-white shadow-md transition-transform active:scale-95 ${
-                isKuromi ? 'bg-pink-600 hover:bg-pink-500 shadow-pink-500/25' : 'bg-sky-500 hover:bg-sky-400 shadow-sky-500/25'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Add Memory / Photo</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              {/* Partner Filter Pills */}
+              <div className="flex items-center gap-1.5">
+                {[
+                  { id: 'all', label: 'All 💕' },
+                  { id: 'Nekol', label: 'Nekol 🖤' },
+                  { id: 'Migz', label: 'Migz 🐧' }
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => { playPop(); setScrapbookPartnerFilter(p.id); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      scrapbookPartnerFilter === p.id
+                        ? isKuromi ? 'bg-pink-600 text-white shadow-sm' : 'bg-sky-500 text-white shadow-sm'
+                        : isKuromi ? 'bg-purple-950/40 text-purple-200 border border-purple-900/60' : 'bg-white text-slate-600 border border-slate-200'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  playPop();
+                  setSelectedDate(new Date().toISOString().split('T')[0]);
+                }}
+                className={`w-full sm:w-auto px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 text-white shadow-md transition-transform active:scale-95 ${
+                  isKuromi ? 'bg-pink-600 hover:bg-pink-500 shadow-pink-500/25' : 'bg-sky-500 hover:bg-sky-400 shadow-sky-500/25'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Add Memory / Photo</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {memories.map(mem => (
+            {filteredMemories.map(mem => (
               <div
                 key={mem.id}
                 className={`p-5 rounded-3xl border transition-all ${
@@ -406,10 +436,23 @@ export default function CalendarView() {
                 )}
 
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="px-2.5 py-0.5 rounded-full font-extrabold bg-pink-500/20 text-pink-500 border border-pink-500/30">
-                      {mem.mood}
-                    </span>
+                  <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full font-extrabold bg-pink-500/20 text-pink-500 border border-pink-500/30">
+                        {mem.mood}
+                      </span>
+                      {mem.captured_by && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          mem.captured_by === 'Nekol'
+                            ? 'bg-pink-500/15 text-pink-400 border border-pink-500/30'
+                            : mem.captured_by === 'Migz'
+                              ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
+                              : 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                        }`}>
+                          📸 {mem.captured_by}
+                        </span>
+                      )}
+                    </div>
                     <span className={`font-bold ${isKuromi ? 'text-slate-300' : 'text-slate-700'}`}>
                       {new Date(mem.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
@@ -442,10 +485,10 @@ export default function CalendarView() {
             ))}
           </div>
 
-          {memories.length === 0 && (
+          {filteredMemories.length === 0 && (
             <div className="py-16 text-center opacity-60">
               <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p className="font-semibold text-sm">Your couple scrapbook is waiting for your first photo!</p>
+              <p className="font-semibold text-sm">No memories recorded yet for this view!</p>
             </div>
           )}
         </div>

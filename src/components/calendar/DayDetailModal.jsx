@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, Heart, Plus, Trash2, X, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useProfile } from '../../context/ProfileContext';
 import { playPop, playSuccessFanfare } from '../../lib/soundEffects';
 
 export const MOODS = [
@@ -14,11 +15,13 @@ export const MOODS = [
 
 export default function DayDetailModal({ date, memories, onClose, onSaveMemory, onDeleteMemory }) {
   const { isKuromi } = useTheme();
+  const { activeProfile } = useProfile();
 
   const [entryDate, setEntryDate] = useState(date || new Date().toISOString().split('T')[0]);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [mood, setMood] = useState('Super in love 🥰');
+  const [capturedBy, setCapturedBy] = useState(activeProfile);
   const [photoUrl, setPhotoUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
@@ -80,7 +83,8 @@ export default function DayDetailModal({ date, memories, onClose, onSaveMemory, 
       title: title.trim(),
       notes: notes.trim(),
       mood,
-      photo_url: photoUrl
+      photo_url: photoUrl,
+      captured_by: capturedBy || activeProfile
     });
 
     setTitle('');
@@ -180,10 +184,21 @@ export default function DayDetailModal({ date, memories, onClose, onSaveMemory, 
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-pink-500/20 text-pink-400">
                           {mem.mood}
                         </span>
+                        {mem.captured_by && (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            mem.captured_by === 'Nekol'
+                              ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
+                              : mem.captured_by === 'Migz'
+                                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                                : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                          }`}>
+                            📸 Captured by {mem.captured_by}
+                          </span>
+                        )}
                       </div>
                       <h5 className="text-base font-bold font-heading mt-1">
                         {mem.title}
@@ -266,6 +281,46 @@ export default function DayDetailModal({ date, memories, onClose, onSaveMemory, 
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* Captured By Selector */}
+              <div>
+                <label className="block font-bold mb-1 opacity-90">Captured By</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { playPop(); setCapturedBy('Nekol'); }}
+                    className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs border flex items-center justify-center gap-1 transition-all ${
+                      capturedBy === 'Nekol'
+                        ? 'bg-pink-500/20 border-pink-500 text-pink-400 shadow-sm'
+                        : isKuromi ? 'border-purple-900/60 bg-purple-950/40 text-purple-300 opacity-60' : 'border-slate-200 bg-slate-50 text-slate-600 opacity-60'
+                    }`}
+                  >
+                    <span>🖤 Nekol</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { playPop(); setCapturedBy('Migz'); }}
+                    className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs border flex items-center justify-center gap-1 transition-all ${
+                      capturedBy === 'Migz'
+                        ? 'bg-sky-500/20 border-sky-500 text-sky-400 shadow-sm'
+                        : isKuromi ? 'border-purple-900/60 bg-purple-950/40 text-purple-300 opacity-60' : 'border-slate-200 bg-slate-50 text-slate-600 opacity-60'
+                    }`}
+                  >
+                    <span>🐧 Migz</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { playPop(); setCapturedBy('Migz & Nekol'); }}
+                    className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs border flex items-center justify-center gap-1 transition-all ${
+                      capturedBy === 'Migz & Nekol'
+                        ? 'bg-purple-500/20 border-purple-500 text-purple-300 shadow-sm'
+                        : isKuromi ? 'border-purple-900/60 bg-purple-950/40 text-purple-300 opacity-60' : 'border-slate-200 bg-slate-50 text-slate-600 opacity-60'
+                    }`}
+                  >
+                    <span>💕 Both</span>
+                  </button>
                 </div>
               </div>
 

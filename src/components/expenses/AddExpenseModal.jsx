@@ -4,14 +4,16 @@ import { useTheme } from '../../context/ThemeContext';
 import { playPop, playSuccessFanfare } from '../../lib/soundEffects';
 
 import { EXPENSE_CATEGORIES, PAID_BY_OPTIONS } from '../../data/expenseCategories';
+import { useProfile } from '../../context/ProfileContext';
 
 export default function AddExpenseModal({ isOpen, onClose, onAddExpense }) {
   const { isKuromi } = useTheme();
+  const { activeProfile, isMigz } = useProfile();
 
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Food Trip');
-  const [paidBy, setPaidBy] = useState('Migz 🐧');
+  const [paidBy, setPaidBy] = useState(() => isMigz ? 'Migz 🐧' : 'Nekol 🖤');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
 
@@ -29,6 +31,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAddExpense }) {
       amount: numAmount,
       category,
       paid_by: paidBy,
+      logged_by: activeProfile,
       date,
       notes: notes.trim()
     });
