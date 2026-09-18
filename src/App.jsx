@@ -75,7 +75,7 @@ export default function App() {
   const isIos = typeof window !== 'undefined' && /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 
   return (
-    <div className={`min-h-screen-dvh flex flex-col transition-colors duration-300 ${
+    <div className={`min-h-screen-dvh w-full max-w-full overflow-x-hidden flex flex-col transition-colors duration-300 ${
       isKuromi 
         ? 'bg-kuromi-dark text-slate-100' 
         : 'bg-gradient-to-b from-sky-50/80 via-white to-sky-50/40 text-slate-800'

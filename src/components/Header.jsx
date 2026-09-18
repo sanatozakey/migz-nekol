@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Cloud, HardDrive, RefreshCw, Volume2, VolumeX, Download, Smartphone } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { THEME_ASSETS } from '../data/themeAssets';
-
 import { useProfile } from '../context/ProfileContext';
 import { playPop, isAudioMuted, toggleAudioMuted, subscribeAudioMute } from '../lib/soundEffects';
+import QuickSettingsModal from './common/QuickSettingsModal';
 
 export default function Header({ onResetGatekeeper, onOpenCoupons, onOpenInstall, isStandalone }) {
-  const { theme, toggleTheme, isKuromi } = useTheme();
+  const { toggleTheme, isKuromi } = useTheme();
   const { activeProfile, toggleProfile, isMigz, myEmoji, partnerName } = useProfile();
   const [muted, setMuted] = useState(() => isAudioMuted());
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeAudioMute((val) => setMuted(val));
@@ -23,10 +24,10 @@ export default function Header({ onResetGatekeeper, onOpenCoupons, onOpenInstall
         ? 'bg-[#0a0812]/95 border-[#271d3d] text-white shadow-lg shadow-purple-950/20' 
         : 'bg-white/95 border-sky-100 text-slate-800 shadow-sm'
     }`}>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 sm:h-18 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto px-3.5 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2">
         {/* Brand & Logo with Official Character Art */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          <div className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center overflow-hidden border shadow-md transition-transform hover:scale-105 ${
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className={`relative shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center overflow-hidden border shadow-md transition-transform hover:scale-105 ${
             isKuromi 
               ? 'bg-purple-950/60 border-purple-700/60' 
               : 'bg-sky-50 border-sky-200'
@@ -36,146 +37,99 @@ export default function Header({ onResetGatekeeper, onOpenCoupons, onOpenInstall
               alt={isKuromi ? "Kuromi" : "Penguin"} 
               className="w-full h-full object-cover"
             />
+            {/* Subtle live cloud sync status dot right on avatar badge */}
+            <span 
+              title={isSupabaseConfigured ? "Live Cloud Synced (Supabase)" : "Local Storage Mode"}
+              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 ${
+                isKuromi ? 'border-[#0a0812]' : 'border-white'
+              } ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} 
+            />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <h1 className="text-lg sm:text-2xl font-black font-heading tracking-tight">
+              <h1 className="text-base sm:text-2xl font-black font-heading tracking-tight truncate">
                 Migz <span className="text-pink-500 font-normal">X</span> Nekol
               </h1>
-              <span className="text-pink-500 text-sm sm:text-base animate-pulse">💕</span>
+              <span className="text-pink-500 text-xs sm:text-base animate-pulse shrink-0">💕</span>
             </div>
           </div>
         </div>
 
-        {/* Right Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
-          {/* Active Profile Switcher Pill */}
+        {/* Right Controls - Modern & Clean (Profile, Theme, Settings) */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* 1. Active Profile Switcher Pill */}
           <button
             onClick={() => { playPop(); toggleProfile(); }}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-black border shadow-sm transition-all hover:scale-105 active:scale-95 ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-black border shadow-sm transition-all hover:scale-105 active:scale-95 shrink-0 ${
               isMigz
-                ? isKuromi ? 'bg-sky-950/60 border-sky-600/60 text-sky-300' : 'bg-sky-50 border-sky-300 text-sky-700'
-                : isKuromi ? 'bg-pink-950/60 border-pink-600/60 text-pink-300' : 'bg-rose-50 border-pink-300 text-pink-700'
+                ? isKuromi ? 'bg-sky-950/70 border-sky-600/70 text-sky-300' : 'bg-sky-50 border-sky-300 text-sky-700'
+                : isKuromi ? 'bg-pink-950/70 border-pink-600/70 text-pink-300' : 'bg-rose-50 border-pink-300 text-pink-700'
             }`}
             title={`Currently browsing as ${activeProfile}. Tap to switch to ${partnerName}!`}
           >
             <span>{myEmoji}</span>
-            <span className="truncate">{activeProfile}</span>
+            <span className="font-extrabold">{activeProfile}</span>
           </button>
 
-          {/* Cloud Sync Status Badge */}
-          <div 
-            title={isSupabaseConfigured ? "Connected to Supabase Real-Time Cloud" : "Local Storage Mode (Add Supabase keys in Vercel / .env for multi-phone cloud sync)"}
-            className={`hidden xs:flex sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold border transition-all ${
-              isSupabaseConfigured
-                ? isKuromi
-                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-700/60 shadow-sm shadow-emerald-950/50'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm'
-                : isKuromi
-                  ? 'bg-amber-950/40 text-amber-300 border-amber-800/60'
-                  : 'bg-amber-50 text-amber-700 border-amber-200'
-            }`}
-          >
-            {isSupabaseConfigured ? (
-              <>
-                <Cloud className="w-3 h-3 text-emerald-500 shrink-0 animate-pulse" />
-                <span>Cloud</span>
-              </>
-            ) : (
-              <>
-                <HardDrive className="w-3 h-3 text-amber-500 shrink-0" />
-                <span>Local</span>
-              </>
-            )}
-          </div>
-
-          {/* Character Theme Switcher */}
+          {/* 2. One-Tap Theme Mascot Switcher */}
           <button
-            onClick={toggleTheme}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl border transition-all duration-300 shadow-md ${
+            onClick={() => { playPop(); toggleTheme(); }}
+            className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl border transition-all hover:scale-105 active:scale-95 shadow-sm shrink-0 ${
               isKuromi 
                 ? 'bg-purple-950/70 border-pink-500/60 text-pink-300 hover:border-pink-400' 
                 : 'bg-sky-50 border-sky-300 text-sky-800 hover:bg-sky-100'
             }`}
-            title="Toggle between Noot Noot 🐧 & Kuromi 🖤 Themes"
+            title={`Toggle to ${isKuromi ? 'Noot Noot 🐧' : 'Kuromi 🖤'} Theme`}
           >
-            <div className="flex items-center gap-1.5 text-xs font-black">
-              <img 
-                src={isKuromi ? THEME_ASSETS.kuromi.heroAvatar : THEME_ASSETS.penguin.heroAvatar} 
-                alt="Theme Mascot" 
-                className="w-5 h-5 rounded-full object-cover border border-pink-400/40"
-              />
-              <span className="hidden sm:inline">{isKuromi ? 'Kuromi 🖤' : 'Noot Noot 🐧'}</span>
-            </div>
+            <img 
+              src={isKuromi ? THEME_ASSETS.kuromi.heroAvatar : THEME_ASSETS.penguin.heroAvatar} 
+              alt="Theme Mascot" 
+              className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border border-pink-400/40"
+            />
           </button>
 
-          {/* Coupons Shortcut Button */}
-          {onOpenCoupons && (
-            <button
-              onClick={() => { playPop(); onOpenCoupons(); }}
-              className={`p-2 rounded-xl text-xs font-bold border transition-all hover:scale-105 active:scale-95 ${
-                isKuromi
-                  ? 'border-purple-800/60 bg-purple-950/40 text-pink-300 hover:bg-purple-900/60'
-                  : 'border-sky-200 bg-white text-pink-600 hover:bg-sky-50'
-              }`}
-              title="Open Love Coupons & Vouchers 🎟️"
-            >
-              <span className="text-sm leading-none">🎟️</span>
-            </button>
-          )}
-
-          {/* PWA Install Button (hidden when already installed in standalone mode) */}
-          {!isStandalone && onOpenInstall && (
-            <button
-              onClick={() => { playPop(); onOpenInstall(); }}
-              className={`p-2 rounded-xl text-xs font-bold border transition-all hover:scale-105 active:scale-95 flex items-center gap-1 ${
-                isKuromi
-                  ? 'border-pink-500/50 bg-pink-950/60 text-pink-300 hover:bg-pink-900/60 shadow-sm shadow-pink-950/50'
-                  : 'border-pink-300 bg-rose-50 text-pink-600 hover:bg-rose-100 shadow-sm'
-              }`}
-              title="Install App to Home Screen 📲"
-            >
-              <Download className="w-4 h-4 text-pink-500 shrink-0" />
-              <span className="hidden md:inline font-bold text-xs">Install</span>
-            </button>
-          )}
-
-          {/* Sound Mute Toggle */}
+          {/* 3. Settings & Shortcuts Drawer Button */}
           <button
-            onClick={() => {
-              const nextMuted = toggleAudioMuted();
-              setMuted(nextMuted);
-              if (!nextMuted) playPop();
-            }}
-            className={`p-2 rounded-xl text-xs font-medium border transition-colors ${
-              muted
-                ? isKuromi
-                  ? 'border-red-900/60 bg-red-950/40 text-red-400 hover:bg-red-900/60'
-                  : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
-                : isKuromi 
-                  ? 'border-purple-800/60 bg-purple-950/40 text-purple-200 hover:bg-purple-900/60' 
-                  : 'border-sky-200 bg-white text-slate-700 hover:bg-sky-50'
-            }`}
-            title={muted ? "Sound Effects Muted (Tap to unmute 🔊)" : "Sound Effects On (Tap to mute 🔇)"}
-          >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-
-          {/* Reset Gatekeeper Test */}
-          <button
-            onClick={onResetGatekeeper}
-            className={`p-2 rounded-xl text-xs font-medium border transition-colors ${
-              isKuromi 
-                ? 'border-purple-800/60 bg-purple-950/40 text-purple-200 hover:bg-purple-900/60' 
+            onClick={() => { playPop(); setShowSettingsModal(true); }}
+            className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl border transition-all hover:scale-105 active:scale-95 shadow-sm shrink-0 ${
+              isKuromi
+                ? 'border-purple-800/60 bg-purple-950/50 text-purple-200 hover:bg-purple-900/60'
                 : 'border-sky-200 bg-white text-slate-700 hover:bg-sky-50'
             }`}
-            title="Re-test Gatekeeper Verification"
+            title="Open Couple Settings & Shortcuts ⚙️"
           >
-            <RefreshCw className="w-4 h-4" />
+            <SlidersHorizontal className="w-4 h-4" />
+            {/* Red dot if sound muted */}
+            {muted && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-400 border border-white" />
+            )}
           </button>
         </div>
       </div>
+
+      {/* Quick Settings & Shortcuts Modal */}
+      <QuickSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        isKuromi={isKuromi}
+        activeProfile={activeProfile}
+        onToggleProfile={toggleProfile}
+        isMigz={isMigz}
+        partnerName={partnerName}
+        muted={muted}
+        onToggleMute={() => {
+          const nextMuted = toggleAudioMuted();
+          setMuted(nextMuted);
+          if (!nextMuted) playPop();
+        }}
+        onOpenInstall={onOpenInstall}
+        isStandalone={isStandalone}
+        onOpenCoupons={onOpenCoupons}
+        onResetGatekeeper={onResetGatekeeper}
+        onToggleTheme={toggleTheme}
+        isSupabaseConfigured={isSupabaseConfigured}
+      />
     </header>
   );
 }

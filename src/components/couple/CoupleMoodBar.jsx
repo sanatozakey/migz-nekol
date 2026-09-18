@@ -101,17 +101,17 @@ export default function CoupleMoodBar({ onOpenCoupons }) {
           : 'bg-white/90 border-sky-100 text-slate-800 shadow-sky-100/50'
       }`}>
         {/* Top bar header */}
-        <div className="flex items-center justify-between gap-3 mb-3 pb-2.5 border-b border-slate-200/20">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-xl bg-pink-500/20 text-pink-500">
+        <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-200/20">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="p-1.5 rounded-xl bg-pink-500/20 text-pink-500 shrink-0">
               <Heart className="w-4 h-4 fill-pink-500 animate-pulse" />
             </span>
-            <h2 className="text-xs sm:text-sm font-black font-heading tracking-wide uppercase">
+            <h2 className="text-xs sm:text-sm font-black font-heading tracking-wide uppercase truncate">
               Couple Vibe & Live Status 💕
             </h2>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Love Coupons Button */}
             {onOpenCoupons && (
               <button
