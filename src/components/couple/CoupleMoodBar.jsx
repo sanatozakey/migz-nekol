@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Heart, Sparkles, BatteryCharging, Smile, Send, Edit3, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, Sparkles, BatteryCharging, Smile, Send, Edit3, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getCoupleStatus, saveCoupleStatus, sendLovePing, subscribeStorage } from '../../utils/storage';
@@ -22,6 +22,13 @@ const MOOD_PRESETS = [
 export default function CoupleMoodBar({ onOpenCoupons }) {
   const { isKuromi } = useTheme();
   const { activeProfile, isMigz } = useProfile();
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('lablab_mood_bar_collapsed_v1') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [statuses, setStatuses] = useState({
     migz: { partner_name: 'Migz', mood: 'Craving Ramen 🍜', custom_status: 'Missing my bebe Nekol! 💕', battery_level: 100 },
     nekol: { partner_name: 'Nekol', mood: 'Craving Boba 🧋', custom_status: 'Thinking of Migz 🖤', battery_level: 100 }
@@ -32,6 +39,17 @@ export default function CoupleMoodBar({ onOpenCoupons }) {
   const [pingMessage, setPingMessage] = useState('Thinking of you right now! 💕');
   const [selectedMood, setSelectedMood] = useState('Super In Love 🥰');
   const [battery, setBattery] = useState(100);
+
+  const toggleCollapse = () => {
+    playPop();
+    setIsCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('lablab_mood_bar_collapsed_v1', next ? 'true' : 'false');
+      } catch {}
+      return next;
+    });
+  };
 
   const loadData = async () => {
     const data = await getCoupleStatus();
@@ -93,15 +111,16 @@ export default function CoupleMoodBar({ onOpenCoupons }) {
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Love Coupons Button */}
             {onOpenCoupons && (
               <button
                 onClick={() => { playPop(); onOpenCoupons(); }}
-                className="px-2.5 sm:px-3 py-1 rounded-xl text-xs font-black border transition-all flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-pink-500/20 text-amber-500 border-amber-400/40 hover:scale-105"
+                className="px-2 sm:px-3 py-1 rounded-xl text-xs font-black border transition-all flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-pink-500/20 text-amber-500 border-amber-400/40 hover:scale-105"
                 title="Open Couple Love Coupons"
               >
-                <span>🎟️ Love Coupons</span>
+                <span>🎟️</span>
+                <span className="hidden sm:inline">Love Coupons</span>
               </button>
             )}
 
@@ -113,107 +132,178 @@ export default function CoupleMoodBar({ onOpenCoupons }) {
               <Send className="w-3 h-3" />
               <span className="hidden xs:inline sm:inline">Send Ping</span>
             </button>
+
+            {/* Collapse / Expand Toggle */}
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              className={`p-1.5 rounded-xl border text-xs transition-all ${
+                isKuromi 
+                  ? 'border-purple-800/60 bg-purple-950/40 text-purple-300 hover:bg-purple-900/60' 
+                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
+              title={isCollapsed ? "Expand Couple Mood Bar" : "Collapse Couple Mood Bar"}
+            >
+              {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            </button>
           </div>
         </div>
 
-        {/* Both Partners' Status Cards Side-by-Side */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Migz Card */}
-          <div className={`p-3.5 rounded-2xl border transition-all relative ${
-            isMigz ? 'ring-2 ring-sky-400/60' : ''
-          } ${
-            isKuromi 
-              ? 'bg-purple-950/40 border-purple-900/40' 
-              : 'bg-sky-50/60 border-sky-200/70'
-          }`}>
-            <div className="flex items-start gap-3">
-              <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-sky-300 shadow-sm shrink-0 bg-sky-100">
-                <img src={THEME_ASSETS.penguin.heroAvatar} alt="Migz" className="w-full h-full object-cover" />
-                <span className="absolute -bottom-1 -right-1 text-xs">🐧</span>
+        {/* Collapsed Compact View vs Full Side-by-Side Cards */}
+        {isCollapsed ? (
+          <div className="flex items-center justify-between gap-2 pt-0.5 animate-fade-in">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none text-xs font-bold py-0.5 flex-1 min-w-0">
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl shrink-0 border ${
+                isKuromi ? 'bg-sky-950/40 border-sky-800/50 text-sky-200' : 'bg-sky-50 border-sky-200 text-sky-800'
+              }`}>
+                <span>🐧 Migz:</span>
+                <span className="font-extrabold">{migzData.mood || 'Super In Love 🥰'}</span>
+                <span className="text-[10px] opacity-75 font-mono">({migzData.battery_level ?? 100}%)</span>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-black text-sky-500 flex items-center gap-1">
-                    Migz
-                    {isMigz && <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-sky-500/20 text-sky-400">(You)</span>}
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-                    <BatteryCharging className="w-3 h-3 text-emerald-400" />
-                    {migzData.battery_level ?? 100}%
-                  </span>
-                </div>
-
-                <p className="text-xs sm:text-sm font-extrabold truncate text-pink-500 mt-0.5">
-                  {migzData.mood || 'Missing you 💕'}
-                </p>
-
-                {migzData.custom_status && (
-                  <p className="text-[11px] italic opacity-80 truncate mt-0.5">
-                    "{migzData.custom_status}"
-                  </p>
-                )}
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl shrink-0 border ${
+                isKuromi ? 'bg-pink-950/40 border-pink-800/50 text-pink-200' : 'bg-rose-50 border-pink-200 text-pink-800'
+              }`}>
+                <span>🖤 Nekol:</span>
+                <span className="font-extrabold">{nekolData.mood || 'Craving Boba 🧋'}</span>
+                <span className="text-[10px] opacity-75 font-mono">({nekolData.battery_level ?? 100}%)</span>
               </div>
             </div>
 
-            {isMigz && (
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
+                type="button"
                 onClick={handleOpenEdit}
-                className="mt-2.5 w-full py-1 rounded-xl text-[11px] font-bold border border-sky-400/30 text-sky-400 hover:bg-sky-500 hover:text-white transition-colors flex items-center justify-center gap-1"
+                className={`px-2.5 py-1 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+                  isKuromi ? 'border-purple-800/60 bg-purple-950/40 text-purple-200 hover:bg-purple-900/60' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+                title="Update My Status"
               >
-                <Edit3 className="w-3 h-3" /> Update My Vibe
+                <Edit3 className="w-3 h-3 text-pink-400" />
+                <span className="hidden sm:inline">Update</span>
               </button>
-            )}
+            </div>
           </div>
-
-          {/* Nekol Card */}
-          <div className={`p-3.5 rounded-2xl border transition-all relative ${
-            !isMigz ? 'ring-2 ring-pink-500/60' : ''
-          } ${
-            isKuromi 
-              ? 'bg-purple-950/40 border-purple-900/40' 
-              : 'bg-rose-50/60 border-rose-200/70'
-          }`}>
-            <div className="flex items-start gap-3">
-              <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-pink-400 shadow-sm shrink-0 bg-pink-100">
-                <img src={THEME_ASSETS.kuromi.heroAvatar} alt="Nekol" className="w-full h-full object-cover" />
-                <span className="absolute -bottom-1 -right-1 text-xs">🖤</span>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-black text-pink-500 flex items-center gap-1">
-                    Nekol
-                    {!isMigz && <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-pink-500/20 text-pink-400">(You)</span>}
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-                    <BatteryCharging className="w-3 h-3 text-pink-400" />
-                    {nekolData.battery_level ?? 100}%
-                  </span>
+        ) : (
+          /* Both Partners' Status Cards Side-by-Side */
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
+            {/* Migz Card */}
+            <div className={`p-3.5 rounded-2xl border transition-all relative ${
+              isMigz ? 'ring-2 ring-sky-400/60' : ''
+            } ${
+              isKuromi 
+                ? 'bg-purple-950/40 border-purple-900/40' 
+                : 'bg-sky-50/60 border-sky-200/70'
+            }`}>
+              <div className="flex items-start gap-3">
+                <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-sky-300 shadow-sm shrink-0 bg-sky-100">
+                  <img src={THEME_ASSETS.penguin.heroAvatar} alt="Migz" className="w-full h-full object-cover" />
+                  <span className="absolute -bottom-1 -right-1 text-xs">🐧</span>
                 </div>
 
-                <p className="text-xs sm:text-sm font-extrabold truncate text-pink-500 mt-0.5">
-                  {nekolData.mood || 'Craving Boba 🧋'}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-extrabold text-sm sm:text-base font-heading text-sky-400">Migz</span>
+                      {isMigz && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                          YOU
+                        </span>
+                      )}
+                    </div>
 
-                {nekolData.custom_status && (
-                  <p className="text-[11px] italic opacity-80 truncate mt-0.5">
-                    "{nekolData.custom_status}"
-                  </p>
-                )}
+                    {/* Social Battery Indicator */}
+                    <div className="flex items-center gap-1 text-[11px] font-bold font-mono text-sky-400">
+                      <BatteryCharging className="w-3 h-3" />
+                      <span>{migzData.battery_level ?? 100}%</span>
+                    </div>
+                  </div>
+
+                  {/* Mood Badge */}
+                  <div className="mt-1">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                      {migzData.mood || 'Super In Love 🥰'}
+                    </span>
+                  </div>
+
+                  {/* Custom sweet note */}
+                  {migzData.custom_status && (
+                    <p className="text-xs opacity-75 italic mt-1 line-clamp-2">
+                      "{migzData.custom_status}"
+                    </p>
+                  )}
+                </div>
               </div>
+
+              {isMigz && (
+                <button
+                  onClick={handleOpenEdit}
+                  className="mt-2.5 w-full py-1 rounded-xl text-[11px] font-bold border border-sky-500/30 text-sky-400 hover:bg-sky-500 hover:text-white transition-colors flex items-center justify-center gap-1"
+                >
+                  <Edit3 className="w-3 h-3" /> Update My Vibe
+                </button>
+              )}
             </div>
 
-            {!isMigz && (
-              <button
-                onClick={handleOpenEdit}
-                className="mt-2.5 w-full py-1 rounded-xl text-[11px] font-bold border border-pink-500/30 text-pink-400 hover:bg-pink-500 hover:text-white transition-colors flex items-center justify-center gap-1"
-              >
-                <Edit3 className="w-3 h-3" /> Update My Vibe
-              </button>
-            )}
+            {/* Nekol Card */}
+            <div className={`p-3.5 rounded-2xl border transition-all relative ${
+              !isMigz ? 'ring-2 ring-pink-400/60' : ''
+            } ${
+              isKuromi 
+                ? 'bg-pink-950/30 border-pink-900/40' 
+                : 'bg-rose-50/60 border-pink-200/70'
+            }`}>
+              <div className="flex items-start gap-3">
+                <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-pink-300 shadow-sm shrink-0 bg-pink-100">
+                  <img src={THEME_ASSETS.kuromi.heroAvatar} alt="Nekol" className="w-full h-full object-cover" />
+                  <span className="absolute -bottom-1 -right-1 text-xs">🖤</span>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-extrabold text-sm sm:text-base font-heading text-pink-400">Nekol</span>
+                      {!isMigz && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-pink-500/20 text-pink-400 border border-pink-500/30">
+                          YOU
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Social Battery Indicator */}
+                    <div className="flex items-center gap-1 text-[11px] font-bold font-mono text-pink-400">
+                      <BatteryCharging className="w-3 h-3" />
+                      <span>{nekolData.battery_level ?? 100}%</span>
+                    </div>
+                  </div>
+
+                  {/* Mood Badge */}
+                  <div className="mt-1">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                      {nekolData.mood || 'Craving Boba 🧋'}
+                    </span>
+                  </div>
+
+                  {/* Custom sweet note */}
+                  {nekolData.custom_status && (
+                    <p className="text-xs opacity-75 italic mt-1 line-clamp-2">
+                      "{nekolData.custom_status}"
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {!isMigz && (
+                <button
+                  onClick={handleOpenEdit}
+                  className="mt-2.5 w-full py-1 rounded-xl text-[11px] font-bold border border-pink-500/30 text-pink-400 hover:bg-pink-500 hover:text-white transition-colors flex items-center justify-center gap-1"
+                >
+                  <Edit3 className="w-3 h-3" /> Update My Vibe
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Edit Mood Modal */}

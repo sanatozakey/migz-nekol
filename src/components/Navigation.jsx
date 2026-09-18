@@ -53,7 +53,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
       </nav>
 
       {/* Mobile Navigation (Bottom Fixed App Bar) */}
-      <nav className={`sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t backdrop-blur-xl transition-colors duration-300 ${
+      <nav className={`sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t backdrop-blur-xl transition-colors duration-300 pb-safe ${
         isKuromi 
           ? 'bg-kuromi-darker/95 border-kuromi-border text-white' 
           : 'bg-white/95 border-penguin-200 text-slate-800'

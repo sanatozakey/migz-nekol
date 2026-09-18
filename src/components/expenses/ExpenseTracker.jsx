@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, Plus, Trash2, Heart, Coffee, UtensilsCrossed, Settings, Target, AlertTriangle, CheckCircle2, Calendar } from 'lucide-react';
+import { Wallet, Plus, Trash2, Heart, Coffee, UtensilsCrossed, Settings, Target, AlertTriangle, CheckCircle2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getExpenses, saveExpense, deleteExpense, getBudgetTargets, saveBudgetTargets, subscribeStorage } from '../../utils/storage';
 import { useTheme } from '../../context/ThemeContext';
 import { playPop, playSuccessFanfare } from '../../lib/soundEffects';
@@ -13,6 +13,7 @@ export default function ExpenseTracker() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [partnerFilter, setPartnerFilter] = useState('all'); // 'all', 'Nekol', 'Migz'
   const [budgetPeriod, setBudgetPeriod] = useState('month'); // 'month', 'week', 'day', 'all'
+  const [selectedMonthDate, setSelectedMonthDate] = useState(() => new Date());
   const [budgetTargets, setBudgetTargets] = useState({ monthly: 10000, weekly: 2500, daily: 500 });
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
@@ -77,8 +78,29 @@ export default function ExpenseTracker() {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-  const currentYearMonth = `${currentYear}-${currentMonth}`; // 'YYYY-MM'
   const todayStr = `${currentYear}-${currentMonth}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Month navigation calculations
+  const selYear = selectedMonthDate.getFullYear();
+  const selMonth = String(selectedMonthDate.getMonth() + 1).padStart(2, '0');
+  const selectedYearMonth = `${selYear}-${selMonth}`; // 'YYYY-MM'
+  const selectedMonthLabel = selectedMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const isCurrentMonthSelected = (now.getFullYear() === selYear && now.getMonth() === selectedMonthDate.getMonth());
+
+  const handlePrevMonth = () => {
+    playPop();
+    setSelectedMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    playPop();
+    setSelectedMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const handleCurrentMonth = () => {
+    playPop();
+    setSelectedMonthDate(new Date());
+  };
 
   // Start of week (Sunday)
   const dayOfWeek = now.getDay();
@@ -90,7 +112,7 @@ export default function ExpenseTracker() {
     if (!e.date) return true;
     if (budgetPeriod === 'day') return e.date === todayStr;
     if (budgetPeriod === 'week') return e.date >= startOfWeekStr && e.date <= todayStr;
-    if (budgetPeriod === 'month') return e.date.startsWith(currentYearMonth);
+    if (budgetPeriod === 'month') return e.date.startsWith(selectedYearMonth);
     return true; // 'all'
   });
 
@@ -126,7 +148,7 @@ export default function ExpenseTracker() {
     let matchPeriod = true;
     if (budgetPeriod === 'day') matchPeriod = (e.date === todayStr);
     else if (budgetPeriod === 'week') matchPeriod = (e.date >= startOfWeekStr && e.date <= todayStr);
-    else if (budgetPeriod === 'month') matchPeriod = (e.date && e.date.startsWith(currentYearMonth));
+    else if (budgetPeriod === 'month') matchPeriod = (e.date && e.date.startsWith(selectedYearMonth));
 
     // 2. Category match
     let matchCategory = true;
@@ -230,7 +252,7 @@ export default function ExpenseTracker() {
                   : 'opacity-70 hover:opacity-100'
               }`}
             >
-              This Month
+              {isCurrentMonthSelected ? 'This Month' : selectedMonthLabel.split(' ')[0]}
             </button>
             <button
               type="button"
@@ -267,6 +289,50 @@ export default function ExpenseTracker() {
             </button>
           </div>
         </div>
+
+        {/* Month Navigator Banner (when viewing 'month') */}
+        {budgetPeriod === 'month' && (
+          <div className="flex items-center justify-between gap-2 p-2 px-3 sm:px-4 rounded-2xl border mb-4 text-xs font-bold transition-all bg-white/5 border-slate-200/20 animate-fade-in">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className={`p-1.5 px-2.5 rounded-xl border transition-all flex items-center gap-1 active:scale-95 ${
+                isKuromi ? 'border-purple-800/60 bg-purple-950/40 hover:bg-purple-900/60 text-purple-200' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+              }`}
+              title="Previous Month"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden xs:inline sm:inline">Prev</span>
+            </button>
+
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <Calendar className="w-3.5 h-3.5 text-pink-500" />
+              <span className="font-extrabold text-xs sm:text-sm font-heading">{selectedMonthLabel}</span>
+              {!isCurrentMonthSelected && (
+                <button
+                  type="button"
+                  onClick={handleCurrentMonth}
+                  className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-pink-500/20 text-pink-400 border border-pink-500/30 hover:bg-pink-500 hover:text-white transition-all active:scale-95"
+                  title="Jump back to current month"
+                >
+                  Jump to Current
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className={`p-1.5 px-2.5 rounded-xl border transition-all flex items-center gap-1 active:scale-95 ${
+                isKuromi ? 'border-purple-800/60 bg-purple-950/40 hover:bg-purple-900/60 text-purple-200' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+              }`}
+              title="Next Month"
+            >
+              <span className="hidden xs:inline sm:inline">Next</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Tally Metrics Numbers */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
@@ -451,7 +517,7 @@ export default function ExpenseTracker() {
       {/* Expense List Header with Active Filters Indicator */}
       <div className="flex items-center justify-between px-1 text-xs font-bold opacity-75">
         <span>
-          Showing {displayedExpenses.length} {displayedExpenses.length === 1 ? 'expense' : 'expenses'} for {budgetPeriod === 'month' ? 'This Month' : budgetPeriod === 'week' ? 'This Week' : budgetPeriod === 'day' ? 'Today' : 'All Time'}
+          Showing {displayedExpenses.length} {displayedExpenses.length === 1 ? 'expense' : 'expenses'} for {budgetPeriod === 'month' ? selectedMonthLabel : budgetPeriod === 'week' ? 'This Week' : budgetPeriod === 'day' ? 'Today' : 'All Time'}
           {filterCategory !== 'all' ? ` (${filterCategory})` : ''}
           {partnerFilter !== 'all' ? ` • ${partnerFilter}'s` : ''}
         </span>

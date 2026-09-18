@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Heart, Calendar, Image as ImageIcon, Sparkles, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Calendar, Image as ImageIcon, Sparkles, Plus, ZoomIn, X } from 'lucide-react';
 import { getMemories, saveMemory, deleteMemory, subscribeStorage } from '../../utils/storage';
 import { useTheme } from '../../context/ThemeContext';
 import { THEME_ASSETS } from '../../data/themeAssets';
@@ -12,8 +12,18 @@ export default function CalendarView() {
   const [memories, setMemories] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [activeLightbox, setActiveLightbox] = useState(null);
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'scrapbook'
   const [scrapbookPartnerFilter, setScrapbookPartnerFilter] = useState('all'); // 'all', 'Nekol', 'Migz'
+
+  // Escape key listener for lightbox
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setActiveLightbox(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const filteredMemories = memories.filter(mem => {
     if (scrapbookPartnerFilter === 'all') return true;
@@ -419,12 +429,22 @@ export default function CalendarView() {
               >
                 {/* Polaroid Frame */}
                 {mem.photo_url ? (
-                  <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden mb-3 border border-slate-200/40 bg-black/10">
+                  <div 
+                    onClick={() => { playPop(); setActiveLightbox(mem); }}
+                    className="w-full aspect-[4/3] rounded-2xl overflow-hidden mb-3 border border-slate-200/40 bg-black/10 relative group cursor-pointer"
+                    title="Click to view full photo 🔍"
+                  >
                     <img
                       src={mem.photo_url}
                       alt={mem.title}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="px-3 py-1.5 rounded-full bg-black/70 text-white backdrop-blur-sm border border-white/20 shadow-lg flex items-center gap-1.5 text-xs font-bold transform translate-y-1 group-hover:translate-y-0 transition-transform">
+                        <ZoomIn className="w-3.5 h-3.5 text-pink-400" />
+                        <span>Enlarge Photo</span>
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <div className={`w-full aspect-[16/9] rounded-2xl flex flex-col items-center justify-center mb-3 border border-dashed ${
@@ -503,6 +523,64 @@ export default function CalendarView() {
           onSaveMemory={handleSaveMemory}
           onDeleteMemory={handleDeleteMemory}
         />
+      )}
+
+      {/* Photo Fullscreen Lightbox Modal */}
+      {activeLightbox && (
+        <div 
+          onClick={() => setActiveLightbox(null)}
+          className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md animate-fade-in cursor-zoom-out"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl w-full max-h-[92vh] flex flex-col items-center cursor-default"
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setActiveLightbox(null)}
+              className="absolute -top-11 right-0 sm:top-2 sm:right-2 z-10 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm border border-white/20 transition-transform active:scale-90"
+              title="Close full photo (Esc)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Main Image */}
+            <div className="rounded-3xl overflow-hidden shadow-2xl border border-white/10 max-h-[72vh] flex items-center justify-center bg-black/50">
+              <img
+                src={activeLightbox.photo_url}
+                alt={activeLightbox.title}
+                className="max-h-[72vh] w-auto max-w-full object-contain rounded-2xl select-none"
+              />
+            </div>
+
+            {/* Bottom Caption Bar */}
+            <div className="mt-3 w-full max-w-2xl px-4 sm:px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/15 text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-pink-500/30 text-pink-300 border border-pink-400/40">
+                    {activeLightbox.mood}
+                  </span>
+                  {activeLightbox.captured_by && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/30 text-purple-200 border border-purple-400/40">
+                      📸 Captured by {activeLightbox.captured_by}
+                    </span>
+                  )}
+                  <span className="text-xs opacity-75 font-semibold">
+                    {new Date(activeLightbox.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </div>
+                <h3 className="font-extrabold text-base sm:text-lg truncate">
+                  {activeLightbox.title}
+                </h3>
+                {activeLightbox.notes && (
+                  <p className="text-xs opacity-85 italic line-clamp-2 mt-0.5">
+                    "{activeLightbox.notes}"
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

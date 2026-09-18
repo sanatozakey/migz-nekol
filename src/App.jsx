@@ -54,7 +54,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-3 sm:py-5 pb-24 sm:pb-12">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-3 sm:py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:pb-12">
         {/* Live Couple Mood & Status Banner */}
         <CoupleMoodBar onOpenCoupons={() => setShowCouponsModal(true)} />
 

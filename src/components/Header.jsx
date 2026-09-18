@@ -1,15 +1,21 @@
-import React from 'react';
-import { Cloud, HardDrive, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Cloud, HardDrive, RefreshCw, Volume2, VolumeX } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { THEME_ASSETS } from '../data/themeAssets';
 
 import { useProfile } from '../context/ProfileContext';
-import { playPop } from '../lib/soundEffects';
+import { playPop, isAudioMuted, toggleAudioMuted, subscribeAudioMute } from '../lib/soundEffects';
 
 export default function Header({ onResetGatekeeper, onOpenCoupons }) {
   const { theme, toggleTheme, isKuromi } = useTheme();
   const { activeProfile, toggleProfile, isMigz, myEmoji, partnerName } = useProfile();
+  const [muted, setMuted] = useState(() => isAudioMuted());
+
+  useEffect(() => {
+    const unsub = subscribeAudioMute((val) => setMuted(val));
+    return () => unsub();
+  }, []);
 
   return (
     <header className={`sticky top-0 z-30 w-full border-b backdrop-blur-md transition-colors duration-300 ${
@@ -102,6 +108,42 @@ export default function Header({ onResetGatekeeper, onOpenCoupons }) {
               />
               <span className="hidden sm:inline">{isKuromi ? 'Kuromi 🖤' : 'Noot Noot 🐧'}</span>
             </div>
+          </button>
+
+          {/* Coupons Shortcut Button */}
+          {onOpenCoupons && (
+            <button
+              onClick={() => { playPop(); onOpenCoupons(); }}
+              className={`p-2 rounded-xl text-xs font-bold border transition-all hover:scale-105 active:scale-95 ${
+                isKuromi
+                  ? 'border-purple-800/60 bg-purple-950/40 text-pink-300 hover:bg-purple-900/60'
+                  : 'border-sky-200 bg-white text-pink-600 hover:bg-sky-50'
+              }`}
+              title="Open Love Coupons & Vouchers 🎟️"
+            >
+              <span className="text-sm leading-none">🎟️</span>
+            </button>
+          )}
+
+          {/* Sound Mute Toggle */}
+          <button
+            onClick={() => {
+              const nextMuted = toggleAudioMuted();
+              setMuted(nextMuted);
+              if (!nextMuted) playPop();
+            }}
+            className={`p-2 rounded-xl text-xs font-medium border transition-colors ${
+              muted
+                ? isKuromi
+                  ? 'border-red-900/60 bg-red-950/40 text-red-400 hover:bg-red-900/60'
+                  : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+                : isKuromi 
+                  ? 'border-purple-800/60 bg-purple-950/40 text-purple-200 hover:bg-purple-900/60' 
+                  : 'border-sky-200 bg-white text-slate-700 hover:bg-sky-50'
+            }`}
+            title={muted ? "Sound Effects Muted (Tap to unmute 🔊)" : "Sound Effects On (Tap to mute 🔇)"}
+          >
+            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
 
           {/* Reset Gatekeeper Test */}

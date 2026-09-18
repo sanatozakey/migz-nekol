@@ -6,7 +6,39 @@ let activeSirenOsc2 = null;
 let activeSirenInterval = null;
 let nootAudioElement = null;
 
+let isSoundMuted = false;
+try {
+  isSoundMuted = localStorage.getItem('lablab_sound_muted_v1') === 'true';
+} catch {}
+
+const audioListeners = new Set();
+export function subscribeAudioMute(cb) {
+  audioListeners.add(cb);
+  return () => audioListeners.delete(cb);
+}
+
+export function isAudioMuted() {
+  return isSoundMuted;
+}
+
+export function setAudioMuted(muted) {
+  isSoundMuted = !!muted;
+  try {
+    localStorage.setItem('lablab_sound_muted_v1', isSoundMuted ? 'true' : 'false');
+  } catch {}
+  audioListeners.forEach(cb => {
+    try { cb(isSoundMuted); } catch {}
+  });
+}
+
+export function toggleAudioMuted() {
+  const next = !isAudioMuted();
+  setAudioMuted(next);
+  return next;
+}
+
 export function playNootNoot() {
+  if (isSoundMuted) return;
   try {
     if (!nootAudioElement) {
       nootAudioElement = new Audio(nootAudioUrl || '/noot noot.mp3');
@@ -39,6 +71,7 @@ function getAudioContext() {
 
 // Gentle bubbly click/pop sound
 export function playPop() {
+  if (isSoundMuted) return;
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -64,6 +97,7 @@ export function playPop() {
 
 // Celebratory fanfare arpeggio
 export function playSuccessFanfare() {
+  if (isSoundMuted) return;
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -92,6 +126,7 @@ export function playSuccessFanfare() {
 
 // Tick sound for roulette spin
 export function playTick() {
+  if (isSoundMuted) return;
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -117,6 +152,7 @@ export function playTick() {
 // Dramatic Intruder Warning Siren
 export function startIntruderSiren() {
   stopIntruderSiren();
+  if (isSoundMuted) return;
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
