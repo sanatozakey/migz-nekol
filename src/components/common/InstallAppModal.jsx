@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Smartphone, Download, Share, PlusSquare, CheckCircle2, X, Sparkles } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { THEME_ASSETS } from '../../data/themeAssets';
@@ -10,8 +10,8 @@ export default function InstallAppModal({ isOpen, onClose, onInstallDirect, canI
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className={`w-full max-w-md p-6 rounded-3xl border shadow-2xl relative ${
+    <div className="fixed inset-0 z-[150] flex items-center justify-center pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] px-4 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className={`w-full max-w-md max-h-[85dvh] overflow-y-auto p-6 rounded-3xl border shadow-2xl relative ${
         isKuromi ? 'bg-[#181426] border-[#382d54] text-white' : 'bg-white border-sky-200 text-slate-800'
       }`}>
         {/* Close Button */}

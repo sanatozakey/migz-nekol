@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, 
@@ -36,11 +36,11 @@ export default function QuickSettingsModal({
   if (!isOpen) return null;
 
   const content = (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-3.5 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] px-3.5 sm:px-4 bg-black/80 backdrop-blur-md animate-fade-in">
       {/* Click outside backdrop */}
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className={`relative w-full max-w-md max-h-[85dvh] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden ${
+      <div className={`relative w-full max-w-md max-h-[82dvh] sm:max-h-[85dvh] flex flex-col rounded-3xl border shadow-2xl transition-all overflow-hidden ${
         isKuromi 
           ? 'bg-[#161224] border-[#362b50] text-slate-100 shadow-purple-950/60' 
           : 'bg-white border-sky-100 text-slate-800 shadow-sky-100/60'

@@ -69,10 +69,10 @@ export default function GatekeeperModal({ onVerified }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] px-4 bg-black/80 backdrop-blur-md">
       {!intruderMode ? (
         // Normal Gatekeeper Dialog
-        <div className={`relative w-full max-w-md p-6 sm:p-8 rounded-3xl shadow-2xl border text-center transition-all duration-300 ${
+        <div className={`relative w-full max-w-md max-h-[85dvh] overflow-y-auto p-6 sm:p-8 rounded-3xl shadow-2xl border text-center transition-all duration-300 ${
           isKuromi 
             ? 'bg-[#151022] border-[#382b54] text-white shadow-pink-500/20 shadow-2xl' 
             : 'bg-white border-sky-200 text-slate-800 shadow-xl'

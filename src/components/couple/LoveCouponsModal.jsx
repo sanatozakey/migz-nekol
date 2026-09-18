@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { Ticket, Sparkles, Check, Plus, X, Heart, Gift } from 'lucide-react';
 import { useProfile } from '../../context/ProfileContext';
@@ -80,8 +80,8 @@ export default function LoveCouponsModal({ isOpen, onClose }) {
   const redeemedCount = coupons.filter(c => c.is_redeemed).length;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className={`w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden ${
+    <div className="fixed inset-0 z-[120] flex items-center justify-center pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] px-3 sm:px-4 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className={`w-full max-w-2xl max-h-[85dvh] flex flex-col rounded-3xl border shadow-2xl overflow-hidden ${
         isKuromi ? 'bg-[#151022] border-[#382b54] text-white' : 'bg-white border-sky-200 text-slate-800'
       }`}>
         {/* Header */}

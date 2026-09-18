@@ -17,12 +17,12 @@ export default function Header({ onOpenSettings }) {
   }, []);
 
   return (
-    <header className={`sticky top-0 z-30 w-full border-b backdrop-blur-md transition-colors duration-300 ${
+    <header className={`sticky top-0 z-30 w-full border-b backdrop-blur-md transition-colors duration-300 pt-safe ${
       isKuromi 
         ? 'bg-[#0a0812]/95 border-[#271d3d] text-white shadow-lg shadow-purple-950/20' 
         : 'bg-white/95 border-sky-100 text-slate-800 shadow-sm'
     }`}>
-      <div className="max-w-5xl mx-auto px-3.5 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2">
+      <div className="max-w-5xl mx-auto px-3.5 sm:px-6 h-14 sm:h-18 flex items-center justify-between gap-2">
         {/* Brand & Logo with Official Character Art */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className={`relative shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center overflow-hidden border shadow-md transition-transform hover:scale-105 ${

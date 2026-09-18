@@ -63,10 +63,26 @@ h1, h2, h3, .font-heading {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Safe area padding for modern mobile devices (iPhone home indicator & Android gesture bar) */
+/* Safe area padding for modern mobile devices (iPhone notch, Dynamic Island & Home indicator) */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.p-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.modal-safe-h {
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 2.5rem);
 }
