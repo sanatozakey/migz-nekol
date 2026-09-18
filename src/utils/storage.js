@@ -93,32 +93,62 @@ export function setUserVerified(status) {
 
 // ----------------- Movies -----------------
 export async function getMovies() {
+  let localMovies = [];
+  try {
+    const raw = localStorage.getItem(KEYS.MOVIES);
+    if (raw) {
+      localMovies = JSON.parse(raw).filter(m => !/^https?:\/\//i.test(m.title?.trim() || ''));
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.from('lablab_movies').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        const validData = data.filter(m => !/^https?:\/\//i.test(m.title?.trim() || ''));
-        localStorage.setItem(KEYS.MOVIES, JSON.stringify(validData));
-        return validData;
+      const { data, error } = await supabase
+        .from('lablab_movies')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        const validRemote = data.filter(m => !/^https?:\/\//i.test(m.title?.trim() || ''));
+
+        // Smart Merge: combine remote and local by ID & title so no local additions get erased
+        const mergedMap = new Map();
+        for (const m of validRemote) {
+          mergedMap.set(m.id, m);
+        }
+
+        const unsyncedLocal = [];
+        for (const m of localMovies) {
+          if (!mergedMap.has(m.id)) {
+            const titleExists = validRemote.some(
+              r => r.title?.trim().toLowerCase() === m.title?.trim().toLowerCase()
+            );
+            if (!titleExists) {
+              mergedMap.set(m.id, m);
+              unsyncedLocal.push(m);
+            }
+          }
+        }
+
+        const mergedList = Array.from(mergedMap.values());
+        localStorage.setItem(KEYS.MOVIES, JSON.stringify(mergedList));
+
+        // Background push any local movies that weren't in Supabase
+        if (unsyncedLocal.length > 0) {
+          saveMoviesBatch(unsyncedLocal).catch(() => {});
+        }
+
+        return mergedList;
       }
     } catch (e) {
       console.warn('Supabase fetch failed, falling back to local storage:', e);
     }
   }
 
-  try {
-    const raw = localStorage.getItem(KEYS.MOVIES);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // Clean up any accidental URL-titled movies from previous bug
-      const cleaned = parsed.filter(m => !/^https?:\/\//i.test(m.title?.trim() || ''));
-      if (cleaned.length !== parsed.length) {
-        localStorage.setItem(KEYS.MOVIES, JSON.stringify(cleaned));
-      }
-      return cleaned;
-    }
-  } catch (e) {
-    console.error(e);
+  if (localMovies.length > 0) {
+    return localMovies;
   }
 
   // First time initialization
@@ -141,9 +171,37 @@ export async function saveMovie(movie) {
 
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('lablab_movies').upsert(movie);
+      const payload = {
+        ...movie,
+        created_at: movie.created_at || new Date().toISOString()
+      };
+
+      // 1. Try full upsert (works when Supabase has poster_url, tmdb_id, is_filipino columns)
+      const { error } = await supabase.from('lablab_movies').upsert(payload);
+      if (error) {
+        console.warn('Supabase full movie upsert notice (schema may lack new columns):', error.message);
+        // 2. Resilient Fallback: If table doesn't have the new TMDB columns yet,
+        // retry with core columns so the title & metadata still sync to partner's phone!
+        const corePayload = {
+          id: movie.id,
+          title: movie.title,
+          genre: movie.genre,
+          duration: movie.duration,
+          rating: movie.rating || 5,
+          watched: Boolean(movie.watched),
+          notes: movie.notes,
+          streaming: movie.streaming,
+          added_by: movie.added_by || 'Migz & Nekol',
+          reactions: movie.reactions || {},
+          created_at: movie.created_at || new Date().toISOString()
+        };
+        const { error: fallbackError } = await supabase.from('lablab_movies').upsert(corePayload);
+        if (fallbackError) {
+          console.error('Supabase movie upsert fallback error:', fallbackError);
+        }
+      }
     } catch (e) {
-      console.warn('Supabase movie upsert failed:', e);
+      console.warn('Supabase movie upsert exception:', e);
     }
   }
   return updated;
@@ -157,7 +215,10 @@ export async function saveMoviesBatch(newMovies) {
   const toAdd = [];
   for (const m of newMovies) {
     if (!existingTitles.has(m.title.trim().toLowerCase())) {
-      toAdd.push(m);
+      toAdd.push({
+        ...m,
+        created_at: m.created_at || new Date().toISOString()
+      });
       existingTitles.add(m.title.trim().toLowerCase());
     }
   }
@@ -170,7 +231,24 @@ export async function saveMoviesBatch(newMovies) {
 
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('lablab_movies').upsert(toAdd);
+      const { error } = await supabase.from('lablab_movies').upsert(toAdd);
+      if (error) {
+        console.warn('Supabase batch upsert notice, retrying with core columns:', error.message);
+        const coreBatch = toAdd.map(m => ({
+          id: m.id,
+          title: m.title,
+          genre: m.genre,
+          duration: m.duration,
+          rating: m.rating || 5,
+          watched: Boolean(m.watched),
+          notes: m.notes,
+          streaming: m.streaming,
+          added_by: m.added_by || 'Migz & Nekol',
+          reactions: m.reactions || {},
+          created_at: m.created_at || new Date().toISOString()
+        }));
+        await supabase.from('lablab_movies').upsert(coreBatch);
+      }
     } catch (e) {
       console.warn('Supabase batch movie upsert failed:', e);
     }

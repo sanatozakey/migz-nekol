@@ -13,6 +13,12 @@ create table if not exists public.lablab_movies (
   watched boolean default false,
   notes text,
   streaming text,
+  added_by text default 'Migz & Nekol',
+  reactions jsonb default '{}'::jsonb,
+  poster_url text,
+  tmdb_id text,
+  is_filipino boolean default false,
+  watched_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -107,9 +113,13 @@ values
   ('coup-6', 'Breakfast in Bed with Favorite Boba / Coffee 🧋', 'Sweet Morning ☕', '☕', 'Both', false)
 on conflict (id) do nothing;
 
--- Seamless Column Additions for Existing Tables (Attribution & Real-time Reactions)
+-- Seamless Column Additions for Existing Tables (Attribution, TMDB Posters & Real-time Reactions)
 alter table public.lablab_movies add column if not exists added_by text default 'Migz & Nekol';
 alter table public.lablab_movies add column if not exists reactions jsonb default '{}'::jsonb;
+alter table public.lablab_movies add column if not exists poster_url text;
+alter table public.lablab_movies add column if not exists tmdb_id text;
+alter table public.lablab_movies add column if not exists is_filipino boolean default false;
+alter table public.lablab_movies add column if not exists watched_at timestamp with time zone;
 
 alter table public.lablab_food_spots add column if not exists added_by text default 'Migz & Nekol';
 alter table public.lablab_food_spots add column if not exists reactions jsonb default '{}'::jsonb;
